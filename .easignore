@@ -1,0 +1,14 @@
+# System directories
+System Volume Information/
+$RECYCLE.BIN/
+pagefile.sys
+hiberfil.sys
+
+# Node modules and common ignores
+node_modules/
+.git/
+.expo/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
