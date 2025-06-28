@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react';
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { 
   StyleSheet, 
   View, 
@@ -34,13 +36,13 @@ export default function OnboardingScreen() {
       setCurrentIndex(currentIndex + 1);
     } else {
       completeOnboarding();
-      // router.replace('/auth');
-    }
+            router.replace('/auth/auth');
+          }
   };
 
   const handleSkip = () => {
     completeOnboarding();
-    // router.replace('/auth');
+     router.replace('/auth/auth');
   };
 
   const handleSelectLanguage = (language: Language) => {

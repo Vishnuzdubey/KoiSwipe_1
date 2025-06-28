@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  Image, 
-  TouchableOpacity, 
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView
-} from 'react-native';
-import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import { useAuthStore } from '@/store/auth-store';
 import colors from '@/constants/colors';
+import { useAuthStore } from '@/store/auth-store';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation, router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useState } from 'react';
+import BasicInfoScreen from '../src/BasicInfoScreen';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -27,6 +28,7 @@ export default function AuthScreen() {
   const [location, setLocation] = useState('');
   
   const { login, signUp, isLoading, error, clearError } = useAuthStore();
+  const navigation = useNavigation();
 
   const handleAuth = async () => {
     clearError();
@@ -34,12 +36,12 @@ export default function AuthScreen() {
     if (isLogin) {
       await login(email, password);
       if (!error) {
-        router.replace('/(tabs)');
+        router.replace('/src/BasicInfoScreen');
       }
     } else {
       await signUp(email, password);
       if (!error) {
-        router.replace('/(tabs)');
+        router.replace('/src/BasicInfoScreen');
       }
     }
   };
@@ -67,7 +69,7 @@ export default function AuthScreen() {
               colors={['transparent', 'rgba(0,0,0,0.8)']}
               style={styles.gradient}
             >
-              <Text style={styles.title}>OtakuMatch</Text>
+              <Text style={styles.title}>Koi</Text>
               <Text style={styles.subtitle}>Find your anime soulmate</Text>
             </LinearGradient>
           </View>
