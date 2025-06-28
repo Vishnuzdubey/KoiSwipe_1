@@ -1,40 +1,88 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  ActivityIndicator,
+  Animated,
+  PanResponder,
+  Dimensions,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useMatchesStore } from '@/store/matches-store';
-import { ProfileCard } from '@/components/ProfileCard';
 import { EmptyState } from '@/components/EmptyState';
+import { ProfileCard } from '@/components/ProfileCard';
 import { User } from '@/types';
 import colors from '@/constants/colors';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
-  const { 
-    potentialMatches, 
-    currentIndex, 
-    isLoading, 
-    loadPotentialMatches, 
-    swipeLeft, 
-    swipeRight 
+  const {
+    potentialMatches,
+    currentIndex,
+    isLoading,
+    loadPotentialMatches,
+    swipeLeft,
+    swipeRight,
   } = useMatchesStore();
-  
+
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   const [matchedUser, setMatchedUser] = useState<User | null>(null);
+
+  const pan = useRef(new Animated.ValueXY()).current;
 
   useEffect(() => {
     loadPotentialMatches();
   }, []);
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx > 120) {
+          // Swipe right
+          Animated.timing(pan, {
+            toValue: { x: width + 100, y: gesture.dy },
+            duration: 300,
+            useNativeDriver: false,
+          }).start(() => {
+            pan.setValue({ x: 0, y: 0 });
+            handleSwipeRight();
+          });
+        } else if (gesture.dx < -120) {
+          // Swipe left
+          Animated.timing(pan, {
+            toValue: { x: -width - 100, y: gesture.dy },
+            duration: 300,
+            useNativeDriver: false,
+          }).start(() => {
+            pan.setValue({ x: 0, y: 0 });
+            swipeLeft();
+          });
+        } else {
+          // Return to center
+          Animated.spring(pan, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   const handleSwipeRight = () => {
-    // Check if we should show a match animation (70% chance)
     const shouldShowMatch = Math.random() < 0.7;
-    
     if (shouldShowMatch && currentIndex < potentialMatches.length) {
       setMatchedUser(potentialMatches[currentIndex]);
       setShowMatchAnimation(true);
-      
-      // Hide the animation after 3 seconds
+
       setTimeout(() => {
         setShowMatchAnimation(false);
         swipeRight();
@@ -52,42 +100,63 @@ export default function DiscoverScreen() {
     );
   }
 
-  if (potentialMatches.length === 0) {
+  if (potentialMatches.length === 0 || currentIndex >= potentialMatches.length) {
     return (
       <EmptyState
-        title="No More Profiles"
-        description="We're finding more otaku for you. Check back soon!"
-        imageUrl="https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000"
+        title={
+          potentialMatches.length === 0
+            ? 'No More Profiles'
+            : 'You\'ve Seen Everyone'
+        }
+        description={
+          potentialMatches.length === 0
+            ? 'We\'re finding more otaku for you. Check back soon!'
+            : 'Check back later for new anime fans in your area.'
+        }
+        imageUrl={
+          potentialMatches.length === 0
+            ? 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000'
+            : 'https://images.unsplash.com/photo-1541562232579-512a21360020?q=80&w=1000'
+        }
         buttonTitle="Refresh"
         onButtonPress={loadPotentialMatches}
       />
     );
   }
 
-  if (currentIndex >= potentialMatches.length) {
-    return (
-      <EmptyState
-        title="You've Seen Everyone"
-        description="Check back later for new anime fans in your area."
-        imageUrl="https://images.unsplash.com/photo-1541562232579-512a21360020?q=80&w=1000"
-        buttonTitle="Start Over"
-        onButtonPress={loadPotentialMatches}
-      />
-    );
-  }
+  const currentUser = potentialMatches[currentIndex];
 
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      
       <View style={styles.cardContainer}>
-        <ProfileCard
-          user={potentialMatches[currentIndex]}
-          onSwipeLeft={swipeLeft}
-          onSwipeRight={handleSwipeRight}
-        />
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={[
+            styles.animatedCard,
+            {
+              transform: [
+                { translateX: pan.x },
+                { translateY: pan.y },
+                {
+                  rotate: pan.x.interpolate({
+                    inputRange: [-200, 0, 200],
+                    outputRange: ['-20deg', '0deg', '20deg'],
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <ProfileCard
+            user={currentUser}
+            onSwipeLeft={swipeLeft}
+            onSwipeRight={handleSwipeRight}
+          />
+        </Animated.View>
       </View>
-      
+
       {showMatchAnimation && matchedUser && (
         <View style={styles.matchOverlay}>
           <View style={styles.matchContent}>
@@ -98,16 +167,12 @@ export default function DiscoverScreen() {
             <View style={styles.matchAvatars}>
               <View style={styles.avatarContainer}>
                 <View style={styles.avatarBorder}>
-                  <View style={styles.avatar}>
-                    {/* Current user avatar would go here */}
-                  </View>
+                  <View style={styles.avatar} />
                 </View>
               </View>
               <View style={styles.avatarContainer}>
                 <View style={styles.avatarBorder}>
-                  <View style={styles.avatar}>
-                    {/* Matched user avatar would go here */}
-                  </View>
+                  <View style={styles.avatar} />
                 </View>
               </View>
             </View>
@@ -130,6 +195,9 @@ const styles = StyleSheet.create({
   cardContainer: {
     flex: 1,
     padding: 16,
+  },
+  animatedCard: {
+    flex: 1,
   },
   matchOverlay: {
     ...StyleSheet.absoluteFillObject,
