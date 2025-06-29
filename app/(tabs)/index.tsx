@@ -1,19 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  ActivityIndicator,
-  Animated,
-  PanResponder,
-  Dimensions,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useMatchesStore } from '@/store/matches-store';
 import { EmptyState } from '@/components/EmptyState';
 import { ProfileCard } from '@/components/ProfileCard';
-import { User } from '@/types';
+import { Skeleton } from '@/components/Skeleton';
 import colors from '@/constants/colors';
+import { useMatchesStore } from '@/store/matches-store';
+import { User } from '@/types';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  PanResponder,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -25,51 +25,76 @@ export default function DiscoverScreen() {
     loadPotentialMatches,
     swipeLeft,
     swipeRight,
+    superLike,
   } = useMatchesStore();
 
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   const [matchedUser, setMatchedUser] = useState<User | null>(null);
+  const [isSwipeInProgress, setIsSwipeInProgress] = useState(false);
 
   const pan = useRef(new Animated.ValueXY()).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     loadPotentialMatches();
   }, []);
 
+  const animateSwipe = (direction: 'left' | 'right', callback: () => void) => {
+    setIsSwipeInProgress(true);
+
+    const toValueX = direction === 'right' ? width + 100 : -width - 100;
+
+    Animated.parallel([
+      Animated.timing(pan, {
+        toValue: { x: toValueX, y: 0 },
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+      Animated.timing(scale, {
+        toValue: 0.8,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      // Reset animation values
+      pan.setValue({ x: 0, y: 0 });
+      opacity.setValue(1);
+      scale.setValue(1);
+      setIsSwipeInProgress(false);
+      callback();
+    });
+  };
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 10;
+        return Math.abs(gestureState.dx) > 10 && !isSwipeInProgress;
       },
       onPanResponderMove: Animated.event(
         [null, { dx: pan.x, dy: pan.y }],
         { useNativeDriver: false }
       ),
       onPanResponderRelease: (_, gesture) => {
+        if (isSwipeInProgress) return;
+
         if (gesture.dx > 120) {
           // Swipe right
-          Animated.timing(pan, {
-            toValue: { x: width + 100, y: gesture.dy },
-            duration: 300,
-            useNativeDriver: false,
-          }).start(() => {
-            pan.setValue({ x: 0, y: 0 });
-            handleSwipeRight();
-          });
+          animateSwipe('right', () => handleSwipeRight());
         } else if (gesture.dx < -120) {
           // Swipe left
-          Animated.timing(pan, {
-            toValue: { x: -width - 100, y: gesture.dy },
-            duration: 300,
-            useNativeDriver: false,
-          }).start(() => {
-            pan.setValue({ x: 0, y: 0 });
-            swipeLeft();
-          });
+          animateSwipe('left', () => handleSwipeLeft());
         } else {
-          // Return to center
+          // Return to center with spring animation
           Animated.spring(pan, {
             toValue: { x: 0, y: 0 },
+            tension: 100,
+            friction: 8,
             useNativeDriver: false,
           }).start();
         }
@@ -77,25 +102,75 @@ export default function DiscoverScreen() {
     })
   ).current;
 
-  const handleSwipeRight = () => {
-    const shouldShowMatch = Math.random() < 0.7;
-    if (shouldShowMatch && currentIndex < potentialMatches.length) {
-      setMatchedUser(potentialMatches[currentIndex]);
+  const handleSwipeLeft = async () => {
+    if (isSwipeInProgress) return;
+    await swipeLeft();
+  };
+
+  const handleSwipeRight = async () => {
+    if (isSwipeInProgress) return;
+
+    const isMatch = await swipeRight();
+
+    if (isMatch && currentIndex < potentialMatches.length) {
+      setMatchedUser(potentialMatches[currentIndex - 1]); // Previous user since index already incremented
       setShowMatchAnimation(true);
 
       setTimeout(() => {
         setShowMatchAnimation(false);
-        swipeRight();
+        setMatchedUser(null);
       }, 3000);
-    } else {
-      swipeRight();
+    }
+  };
+
+  const handleSuperLike = async () => {
+    if (isSwipeInProgress) return;
+
+    // Animate super like with special effect
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 1.1,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+      Animated.timing(scale, {
+        toValue: 0.8,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      scale.setValue(1);
+      opacity.setValue(1);
+    });
+
+    const isMatch = await superLike();
+
+    if (isMatch && currentIndex < potentialMatches.length) {
+      setMatchedUser(potentialMatches[currentIndex - 1]); // Previous user since index already incremented
+      setShowMatchAnimation(true);
+
+      setTimeout(() => {
+        setShowMatchAnimation(false);
+        setMatchedUser(null);
+      }, 3000);
     }
   };
 
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.cardContainer}>
+          <Skeleton
+            height={600}
+            width="100%"
+            borderRadius={16}
+          />
+        </View>
       </View>
     );
   }
@@ -105,12 +180,12 @@ export default function DiscoverScreen() {
       <EmptyState
         title={
           potentialMatches.length === 0
-            ? 'No More Profiles'
+            ? 'No Recommendations Available'
             : 'You\'ve Seen Everyone'
         }
         description={
           potentialMatches.length === 0
-            ? 'We\'re finding more otaku for you. Check back soon!'
+            ? 'Complete your profile setup to get personalized recommendations!'
             : 'Check back later for new anime fans in your area.'
         }
         imageUrl={
@@ -138,6 +213,7 @@ export default function DiscoverScreen() {
               transform: [
                 { translateX: pan.x },
                 { translateY: pan.y },
+                { scale: scale },
                 {
                   rotate: pan.x.interpolate({
                     inputRange: [-200, 0, 200],
@@ -146,13 +222,15 @@ export default function DiscoverScreen() {
                   }),
                 },
               ],
+              opacity: opacity,
             },
           ]}
         >
           <ProfileCard
             user={currentUser}
-            onSwipeLeft={swipeLeft}
+            onSwipeLeft={handleSwipeLeft}
             onSwipeRight={handleSwipeRight}
+            onSuperLike={handleSuperLike}
           />
         </Animated.View>
       </View>
@@ -201,7 +279,7 @@ const styles = StyleSheet.create({
   },
   matchOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(138, 111, 223, 0.9)',
+    backgroundColor: 'rgba(138, 111, 223, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -215,6 +293,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 12,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   matchSubtitle: {
     fontSize: 18,
@@ -236,10 +317,15 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   avatar: {
     width: 90,

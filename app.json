@@ -1,12 +1,43 @@
 {
   "expo": {
+    "name": "KoiSwipe",
+    "slug": "koiswipe",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "koiswipe",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aloneking7980.koiswipe"
+    },
+    "android": {
+      "package": "com.aloneking7980.koiswipe",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "eas": {
         "projectId": "f3dcea33-ce96-472f-b25c-bca3b83db72d"
       }
-    },
-    "android": {
-      "package": "com.aloneking7980.koiswipe"
     }
   }
 }

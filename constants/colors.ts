@@ -13,4 +13,5 @@ export default {
   info: '#2196F3',
   overlay: 'rgba(0, 0, 0, 0.5)',
   transparent: 'transparent',
+  white: '#FFFFFF',
 };

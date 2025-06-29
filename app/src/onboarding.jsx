@@ -1,32 +1,46 @@
-import React, { useState, useRef } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  Image, 
-  FlatList, 
-  Dimensions, 
-  TouchableOpacity,
-  SafeAreaView
-} from 'react-native';
-import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { Button } from '@/components/Button';
-import { useAppStore } from '@/store/app-store';
-import { onboardingSteps, languages } from '@/mocks/onboarding';
-import { Language, OnboardingStep } from '@/types';
 import colors from '@/constants/colors';
+import { languages, onboardingSteps } from '@/mocks/onboarding';
+import { useAppStore } from '@/store/app-store';
+import { router, useFocusEffect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useRef, useState } from 'react';
+import {
+  BackHandler,
+  Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showLanguages, setShowLanguages] = useState(false);
-  const flatListRef = useRef<FlatList>(null);
-  
+  const flatListRef = useRef < FlatList > (null);
+
   const completeOnboarding = useAppStore((state) => state.completeOnboarding);
   const setLanguage = useAppStore((state) => state.setLanguage);
   const selectedLanguage = useAppStore((state) => state.language);
+
+  // Prevent going back to auth screen
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Return true to prevent default back behavior
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription?.remove();
+    }, [])
+  );
 
   const handleNext = () => {
     if (currentIndex < onboardingSteps.length - 1) {
@@ -34,13 +48,13 @@ export default function OnboardingScreen() {
       setCurrentIndex(currentIndex + 1);
     } else {
       completeOnboarding();
-      router.replace('/auth');
+      router.replace('/src/AnimePreferencesScreen');
     }
   };
 
   const handleSkip = () => {
     completeOnboarding();
-    router.replace('/auth');
+    router.replace('/src/AnimePreferencesScreen');
   };
 
   const handleSelectLanguage = (language) => {
@@ -51,8 +65,8 @@ export default function OnboardingScreen() {
   const renderOnboardingItem = ({ item }) => {
     return (
       <View style={styles.slide}>
-        <Image 
-          source={{ uri: item.imageUrl }} 
+        <Image
+          source={{ uri: item.imageUrl }}
           style={styles.image}
           resizeMode="cover"
         />
@@ -107,7 +121,7 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      
+
       {showLanguages ? (
         renderLanguageSelector()
       ) : (
@@ -120,7 +134,7 @@ export default function OnboardingScreen() {
               <Text style={styles.skipButton}>Skip</Text>
             </TouchableOpacity>
           </View>
-          
+
           <FlatList
             ref={flatListRef}
             data={onboardingSteps}
@@ -134,7 +148,7 @@ export default function OnboardingScreen() {
               setCurrentIndex(index);
             }}
           />
-          
+
           <View style={styles.footer}>
             <View style={styles.pagination}>
               {onboardingSteps.map((_, index) => (
@@ -147,7 +161,7 @@ export default function OnboardingScreen() {
                 />
               ))}
             </View>
-            
+
             <Button
               title={currentIndex === onboardingSteps.length - 1 ? "Get Started" : "Next"}
               onPress={handleNext}

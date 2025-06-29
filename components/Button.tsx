@@ -1,14 +1,14 @@
-import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-  TouchableOpacityProps
-} from 'react-native';
 import colors from '@/constants/colors';
+import React from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextStyle,
+  TouchableOpacity,
+  TouchableOpacityProps,
+  ViewStyle
+} from 'react-native';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
@@ -107,21 +107,21 @@ export const Button: React.FC<ButtonProps> = ({
       {...rest}
     >
       {isLoading ? (
-        <ActivityIndicator 
-          color={variant === 'primary' ? '#FFFFFF' : colors.primary} 
-          size="small" 
+        <ActivityIndicator
+          color={variant === 'primary' ? '#FFFFFF' : colors.primary}
+          size="small"
         />
       ) : (
         <>
           {leftIcon}
-          <Text 
+          <Text
             style={[
-              styles.text, 
-              getTextStyle(), 
+              styles.text,
+              getTextStyle(),
               getTextSizeStyle(),
               disabled && styles.disabledText,
               textStyle,
-              (leftIcon || rightIcon) && { marginHorizontal: 8 }
+              (leftIcon || rightIcon) ? { marginHorizontal: 8 } : undefined
             ]}
           >
             {title}
@@ -138,7 +138,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   text: {
     fontWeight: '600',
@@ -147,55 +155,64 @@ const styles = StyleSheet.create({
   // Variants
   primaryButton: {
     backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
   },
   primaryText: {
     color: '#FFFFFF',
   },
   secondaryButton: {
     backgroundColor: colors.secondary,
+    shadowColor: colors.secondary,
+    shadowOpacity: 0.3,
   },
   secondaryText: {
     color: '#FFFFFF',
   },
   outlineButton: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.primary,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   outlineText: {
     color: colors.primary,
   },
   textButton: {
     backgroundColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   textButtonText: {
     color: colors.primary,
   },
   // Sizes
   smallButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   smallText: {
     fontSize: 14,
   },
   mediumButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
   },
   mediumText: {
     fontSize: 16,
   },
   largeButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingVertical: 18,
+    paddingHorizontal: 36,
   },
   largeText: {
     fontSize: 18,
   },
   // States
   disabledButton: {
-    opacity: 0.5,
+    opacity: 0.6,
+    shadowOpacity: 0.1,
   },
   disabledText: {
     opacity: 0.8,

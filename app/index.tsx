@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, View, Image } from 'react-native';
-import { router } from 'expo-router';
+import colors from '@/constants/colors';
 import { useAppStore } from '@/store/app-store';
 import { useAuthStore } from '@/store/auth-store';
-import colors from '@/constants/colors';
+import { router } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Image, StyleSheet, View } from 'react-native';
 
 export default function SplashScreen() {
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
@@ -14,7 +14,7 @@ export default function SplashScreen() {
       if (!hasCompletedOnboarding) {
         router.replace('/onboarding');
       } else if (!isAuthenticated) {
-        router.replace('/auth');
+        router.replace('/auth/auth');
       } else {
         router.replace('/(tabs)');
       }

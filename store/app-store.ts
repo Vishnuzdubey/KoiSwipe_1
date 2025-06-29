@@ -1,7 +1,7 @@
+import { Language } from '@/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Language } from '@/types';
 
 interface AppState {
   language: Language;
@@ -14,6 +14,7 @@ interface AppState {
   completeOnboarding: () => void;
   toggleDarkMode: () => void;
   toggleNotifications: () => void;
+  resetApp: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -38,6 +39,15 @@ export const useAppStore = create<AppState>()(
       
       toggleNotifications: () => {
         set((state) => ({ notificationsEnabled: !state.notificationsEnabled }));
+      },
+      
+      resetApp: () => {
+        set({
+          language: { code: 'en', name: 'English', nativeName: 'English' },
+          hasCompletedOnboarding: false,
+          isDarkMode: false,
+          notificationsEnabled: true,
+        });
       },
     }),
     {

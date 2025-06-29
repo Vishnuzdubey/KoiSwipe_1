@@ -1,65 +1,66 @@
+import colors from '@/constants/colors';
+import { router, useFocusEffect } from 'expo-router';
 import React, { useState } from 'react';
-import { router } from 'expo-router';
-import { Button } from 'react-native';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
+  BackHandler,
   Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 // Color palette
-const colors = {
-  primary: '#8A6FDF',
-  secondary: '#FFA6C9',
-  background: '#FFFFFF',
-  card: '#F8F8F8',
-  text: '#333333',
-  textLight: '#777777',
-  border: '#EEEEEE',
-  success: '#4CAF50',
-  error: '#F44336',
-  warning: '#FFC107',
-  info: '#2196F3',
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  transparent: 'transparent',
-  white: '#FFFFFF',
-  gradientStart: '#8A6FDF',
-  gradientEnd: '#FFA6C9',
-};
+// const colors = {
+//   primary: '#8A6FDF',
+//   secondary: '#FFA6C9',
+//   background: '#FFFFFF',
+//   card: '#F8F8F8',
+//   text: '#333333',
+//   textLight: '#777777',
+//   border: '#EEEEEE',
+//   success: '#4CAF50',
+//   error: '#F44336',
+//   warning: '#FFC107',
+//   info: '#2196F3',
+//   overlay: 'rgba(0, 0, 0, 0.5)',
+//   transparent: 'transparent',
+//   white: '#FFFFFF',
+//   gradientStart: '#8A6FDF',
+//   gradientEnd: '#FFA6C9',
+// };
 
-// Data arrays
+// Data arrays with enhanced visual elements
 const animeWorlds = [
-  { id: 1, name: 'Attack on Titan', description: 'Fight titans together' },
-  { id: 2, name: 'My Hero Academia', description: 'Be heroes with quirks' },
-  { id: 3, name: 'Demon Slayer', description: 'Slay demons as a duo' },
-  { id: 4, name: 'One Piece', description: 'Sail the Grand Line' },
-  { id: 5, name: 'Naruto', description: 'Train as ninja partners' },
-  { id: 6, name: 'Studio Ghibli', description: 'Magical peaceful world' }
+  { id: 1, name: 'Attack on Titan', description: 'Fight titans together', emoji: '⚔️' },
+  { id: 2, name: 'My Hero Academia', description: 'Be heroes with quirks', emoji: '🦸' },
+  { id: 3, name: 'Demon Slayer', description: 'Slay demons as a duo', emoji: '👺' },
+  { id: 4, name: 'One Piece', description: 'Sail the Grand Line', emoji: '🏴‍☠️' },
+  { id: 5, name: 'Naruto', description: 'Train as ninja partners', emoji: '🥷' },
+  { id: 6, name: 'Studio Ghibli', description: 'Magical peaceful world', emoji: '🌟' }
 ];
 
 const conventionOptions = [
-  { id: 1, name: 'Absolutely!' },
-  { id: 2, name: 'Maybe' },
-  { id: 3, name: 'Not really' }
+  { id: 1, name: 'Absolutely!', emoji: '🎉' },
+  { id: 2, name: 'Maybe', emoji: '🤔' },
+  { id: 3, name: 'Not really', emoji: '😅' }
 ];
 
 const subDubPreferences = [
-  { id: 1, name: 'Sub only', description: 'Original voices matter' },
-  { id: 2, name: 'Dub only', description: 'English all the way' },
-  { id: 3, name: 'Both', description: 'Best of both worlds' }
+  { id: 1, name: 'Sub only', description: 'Original voices matter', emoji: '🇯🇵' },
+  { id: 2, name: 'Dub only', description: 'English all the way', emoji: '🇺🇸' },
+  { id: 3, name: 'Both', description: 'Best of both worlds', emoji: '🌍' }
 ];
 
 const dateIdeas = [
-  { id: 1, name: 'Anime Marathon', description: 'Binge watch together' },
-  { id: 2, name: 'Cosplay Date', description: 'Dress up as characters' },
-  { id: 3, name: 'Anime Cafe', description: 'Themed restaurant visit' },
-  { id: 4, name: 'Manga Shopping', description: 'Browse bookstores together' }
+  { id: 1, name: 'Anime Marathon', description: 'Binge watch together', emoji: '📺' },
+  { id: 2, name: 'Cosplay Date', description: 'Dress up as characters', emoji: '🎭' },
+  { id: 3, name: 'Anime Cafe', description: 'Themed restaurant visit', emoji: '☕' },
+  { id: 4, name: 'Manga Shopping', description: 'Browse bookstores together', emoji: '📚' }
 ];
 
 const CompatibilityScreen = () => {
@@ -71,6 +72,20 @@ const CompatibilityScreen = () => {
     dateIdea: ''
   });
 
+  // Prevent going back during onboarding
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Return true to prevent default back behavior
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription?.remove();
+    }, [])
+  );
+
   const updateOnboardingData = (updates) => {
     setOnboardingData(prev => ({ ...prev, ...updates }));
   };
@@ -79,18 +94,26 @@ const CompatibilityScreen = () => {
     console.log('Transitioning to:', phase);
     // Add your navigation logic here
   };
-     const handleNext = () => {
-     router.replace('/src/FinalScreen'); // Navigate to the final screen
-    };
+  const handleNext = () => {
+    router.replace('/src/FinalScreen'); // Navigate to the final screen
+  };
 
   const renderCompatibilityScreen = () => (
     <View style={styles.phaseContainer}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: '75%' }]} />
+        </View>
+        <Text style={styles.stepIndicator}>Step 3 of 5</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.titleContainer}>
           <Text style={styles.phaseTitle}>Compatibility Questions</Text>
-          <Text style={styles.phaseSubtitle}>Let's find your perfect anime match!</Text>
+          <Text style={styles.phaseSubtitle}>Let's find your perfect anime match! 💕</Text>
         </View>
-        
+
         <View style={styles.formContainer}>
           <Text style={styles.fieldLabel}>Which anime world would you live in?</Text>
           <View style={styles.optionGrid}>
@@ -104,6 +127,7 @@ const CompatibilityScreen = () => {
                 onPress={() => updateOnboardingData({ animeWorld: world.name })}
                 activeOpacity={0.7}
               >
+                <Text style={styles.cardEmoji}>{world.emoji}</Text>
                 <Text style={[
                   styles.worldText,
                   onboardingData.animeWorld === world.name && styles.selectedOptionText
@@ -119,7 +143,7 @@ const CompatibilityScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
-          
+
           <Text style={styles.fieldLabel}>Would you attend a real anime convention with your partner?</Text>
           <View style={styles.optionRow}>
             {conventionOptions.map((option) => (
@@ -132,6 +156,7 @@ const CompatibilityScreen = () => {
                 onPress={() => updateOnboardingData({ conventionInterest: option.name })}
                 activeOpacity={0.7}
               >
+                <Text style={styles.cardEmoji}>{option.emoji}</Text>
                 <Text style={[
                   styles.conventionText,
                   onboardingData.conventionInterest === option.name && styles.selectedOptionText
@@ -141,7 +166,7 @@ const CompatibilityScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
-          
+
           <Text style={styles.fieldLabel}>Sub or Dub?</Text>
           <View style={styles.optionRow}>
             {subDubPreferences.map((pref) => (
@@ -154,6 +179,7 @@ const CompatibilityScreen = () => {
                 onPress={() => updateOnboardingData({ subOrDub: pref.name })}
                 activeOpacity={0.7}
               >
+                <Text style={styles.cardEmoji}>{pref.emoji}</Text>
                 <Text style={[
                   styles.subDubText,
                   onboardingData.subOrDub === pref.name && styles.selectedOptionText
@@ -169,7 +195,7 @@ const CompatibilityScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.fieldLabel}>What's your favorite anime opening/ending song? (Optional)</Text>
             <View style={styles.inputWrapper}>
@@ -182,7 +208,7 @@ const CompatibilityScreen = () => {
               />
             </View>
           </View>
-          
+
           <Text style={styles.fieldLabel}>Anime Date Idea</Text>
           <View style={styles.optionGrid}>
             {dateIdeas.map((idea) => (
@@ -195,6 +221,7 @@ const CompatibilityScreen = () => {
                 onPress={() => updateOnboardingData({ dateIdea: idea.name })}
                 activeOpacity={0.7}
               >
+                <Text style={styles.cardEmoji}>{idea.emoji}</Text>
                 <Text style={[
                   styles.dateText,
                   onboardingData.dateIdea === idea.name && styles.selectedOptionText
@@ -211,8 +238,8 @@ const CompatibilityScreen = () => {
             ))}
           </View>
         </View>
-        
-<View style={{ marginTop: 40 }}>
+
+        <View style={{ marginTop: 40 }}>
           <TouchableOpacity
             style={[
               styles.continueButton,
@@ -246,18 +273,42 @@ const CompatibilityScreen = () => {
 
 const styles = StyleSheet.create({
   phaseContainer: {
-    flex: 1,        
+    flex: 1,
     backgroundColor: colors.background,
-    marginTop:40,
+  },
+  header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    marginBottom: 12,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+  },
+  stepIndicator: {
+    fontSize: 14,
+    color: colors.textLight,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingBottom: 40,
   },
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginVertical: 30,
   },
   phaseTitle: {
     fontSize: 28,
@@ -277,180 +328,175 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fieldLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 12,
-    marginTop: 24,
-    letterSpacing: -0.2,
+    marginBottom: 16,
+    marginTop: 32,
+    letterSpacing: -0.3,
   },
   optionGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 16,
     marginBottom: 8,
   },
   optionRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
     marginBottom: 8,
+  },
+  cardEmoji: {
+    fontSize: 32,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   worldCard: {
     flex: 1,
-    minWidth: (width - 64) / 2,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    minWidth: (width - 40 - 16) / 2,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
     shadowColor: colors.text,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   conventionCard: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
     shadowColor: colors.text,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   subDubCard: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
     shadowColor: colors.text,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   dateCard: {
     flex: 1,
-    minWidth: (width - 64) / 2,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    minWidth: (width - 40 - 16) / 2,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
     shadowColor: colors.text,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   selectedOptionCard: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
     shadowColor: colors.primary,
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+    transform: [{ scale: 1.02 }],
   },
   worldText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   conventionText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
   },
   subDubText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   dateText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   worldDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textLight,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   subDubDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textLight,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   dateDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textLight,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   selectedOptionText: {
     color: colors.white,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   selectedDescriptionText: {
     color: colors.white,
-    opacity: 0.9,
+    opacity: 0.95,
+    fontWeight: '600',
   },
   inputContainer: {
-    marginTop: 24,
+    marginTop: 32,
     marginBottom: 8,
   },
   inputWrapper: {
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.border,
     shadowColor: colors.text,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   textInput: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     fontSize: 16,
     color: colors.text,
     fontWeight: '500',
@@ -458,17 +504,14 @@ const styles = StyleSheet.create({
   continueButton: {
     backgroundColor: colors.primary,
     paddingVertical: 18,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     marginTop: 40,
     shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowRadius: 16,
+    elevation: 8,
   },
   disabledButton: {
     backgroundColor: colors.border,
@@ -477,7 +520,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.white,
     letterSpacing: -0.3,
   },

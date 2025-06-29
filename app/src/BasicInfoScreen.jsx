@@ -1,113 +1,48 @@
+import { Button } from '@/components/Button';
+import colors from '@/constants/colors';
+import { router, useFocusEffect } from 'expo-router';
 import React, { useState } from 'react';
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { router } from 'expo-router';
-import { Button } from 'react-native';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
+  BackHandler,
   Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
-  Animated,
+  View
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-// Color palette
-const colors = {
-  primary: '#8A6FDF',
-  secondary: '#FFA6C9',
-  background: '#FFFFFF',
-  card: '#F8F8F8',
-  text: '#333333',
-  textLight: '#777777',
-  border: '#EEEEEE',
-  success: '#4CAF50',
-  error: '#F44336',
-  warning: '#FFC107',
-  info: '#2196F3',
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  transparent: 'transparent',
-  white: '#FFFFFF',
-  gradientStart: '#8A6FDF',
-  gradientEnd: '#FFA6C9',
-};
-
-export const BasicInfoScreen = ({Navigation}) => {
+const BasicInfoScreen = () => {
   const [onboardingData, setOnboardingData] = useState({
-    displayName: '',
-    gender: 'male',
-    lookingFor: 'women',
-    dateOfBirth: '',
-    discoveryRadius: 50,
+    bio: '',
+    hobbies: '',
+    profession: '',
+    favoriteQuote: '',
   });
 
-  const [sliderValue, setSliderValue] = useState(50);
+  // Prevent going back to auth screen during onboarding
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Return true to prevent default back behavior
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription?.remove();
+    }, [])
+  );
 
   const handleNext = () => {
-     router.replace('/src/AnimePreferencesScreen');
-    };
+    router.replace('/src/AnimePreferencesScreen');
+  };
 
   const updateOnboardingData = (updates) => {
     setOnboardingData(prev => ({ ...prev, ...updates }));
   };
-
-  const handleSliderChange = (value) => {
-    setSliderValue(value);
-    updateOnboardingData({ discoveryRadius: value });
-  };
-
-  const SliderComponent = () => {
-    return (
-      <View style={styles.sliderContainer}>
-        <View style={styles.sliderLabels}>
-          <Text style={styles.sliderLabel}>5km</Text>
-          <Text style={styles.sliderLabel}>500km</Text>
-        </View>
-        <View style={styles.sliderTrack}>
-          <View 
-            style={[
-              styles.sliderProgress, 
-              { width: `${((sliderValue - 5) / 495) * 100}%` }
-            ]} 
-          />
-          <TouchableOpacity
-            style={[
-              styles.sliderThumb,
-              { left: `${((sliderValue - 5) / 495) * 100}%` }
-            ]}
-            onPress={() => {}}
-          />
-        </View>
-      </View>
-    );
-  };
-
-  const renderOptionGrid = (options, selectedValue, onSelect) => (
-    <View style={styles.optionGrid}>
-      {options.map((option) => (
-        <TouchableOpacity
-          key={option}
-          style={[
-            styles.optionCard,
-            selectedValue === option && styles.selectedOptionCard
-          ]}
-          onPress={() => onSelect(option)}
-          activeOpacity={0.7}
-        >
-          <Text style={[
-            styles.optionText,
-            selectedValue === option && styles.selectedOptionText
-          ]}>
-            {option.charAt(0).toUpperCase() + option.slice(1).replace('-', ' ')}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
 
   return (
     <View style={styles.container}>
@@ -119,63 +54,81 @@ export const BasicInfoScreen = ({Navigation}) => {
         <Text style={styles.stepIndicator}>Step 2 of 6</Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Title Section */}
         <View style={styles.titleContainer}>
-          <Text style={styles.phaseTitle}>Basic Information</Text>
-          <Text style={styles.phaseSubtitle}>Let's get to know you better</Text>
+          <Text style={styles.phaseTitle}>Tell Us About Yourself</Text>
+          <Text style={styles.phaseSubtitle}>Help others get to know you better</Text>
         </View>
 
         {/* Form Container */}
         <View style={styles.formContainer}>
-          
-          {/* Display Name Input */}
+
+          {/* Bio Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.fieldLabel}>Display Name / Username</Text>
+            <Text style={styles.fieldLabel}>Bio</Text>
+            <Text style={styles.fieldDescription}>Write a short description about yourself</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.textInput, styles.multilineInput]}
+                value={onboardingData.bio}
+                onChangeText={(text) => updateOnboardingData({ bio: text })}
+                placeholder="Tell people about yourself, your interests, what makes you unique..."
+                placeholderTextColor={colors.textLight}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+
+          {/* Hobbies Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.fieldLabel}>Hobbies & Interests</Text>
+            <Text style={styles.fieldDescription}>What do you love doing in your free time?</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.textInput}
-                value={onboardingData.displayName}
-                onChangeText={(text) => updateOnboardingData({ displayName: text })}
-                placeholder="Your anime name..."
+                value={onboardingData.hobbies}
+                onChangeText={(text) => updateOnboardingData({ hobbies: text })}
+                placeholder="Gaming, reading, traveling, cooking..."
                 placeholderTextColor={colors.textLight}
               />
             </View>
           </View>
 
-          {/* Gender Selection */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Gender</Text>
-            {renderOptionGrid(
-              ['male', 'female', 'non-binary', 'other'],
-              onboardingData.gender,
-              (value) => updateOnboardingData({ gender: value })
-            )}
-          </View>
-
-          {/* Looking For Selection */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Looking For</Text>
-            {renderOptionGrid(
-              ['men', 'women', 'everyone'],
-              onboardingData.lookingFor,
-              (value) => updateOnboardingData({ lookingFor: value })
-            )}
-          </View>
-
-          {/* Date of Birth Input */}
+          {/* Profession Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.fieldLabel}>Date of Birth</Text>
+            <Text style={styles.fieldLabel}>Profession</Text>
+            <Text style={styles.fieldDescription}>What do you do for work or study?</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.textInput}
-                value={onboardingData.dateOfBirth}
-                onChangeText={(text) => updateOnboardingData({ dateOfBirth: text })}
-                placeholder="DD/MM/YYYY"
+                value={onboardingData.profession}
+                onChangeText={(text) => updateOnboardingData({ profession: text })}
+                placeholder="Software Developer, Student, Teacher..."
                 placeholderTextColor={colors.textLight}
+              />
+            </View>
+          </View>
+
+          {/* Favorite Quote Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.fieldLabel}>Favorite Quote or Motto</Text>
+            <Text style={styles.fieldDescription}>Something that inspires you or represents your philosophy</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.textInput, styles.multilineInput]}
+                value={onboardingData.favoriteQuote}
+                onChangeText={(text) => updateOnboardingData({ favoriteQuote: text })}
+                placeholder="A quote from your favorite anime character or personal motto..."
+                placeholderTextColor={colors.textLight}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
               />
             </View>
           </View>
@@ -184,19 +137,12 @@ export const BasicInfoScreen = ({Navigation}) => {
 
         {/* Continue Button */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[
-              styles.continueButton,
-              (!onboardingData.displayName || !onboardingData.dateOfBirth) && styles.disabledButton
-            ]}
-            disabled={!onboardingData.displayName || !onboardingData.dateOfBirth}
+          <Button
+            title="Continue"
             onPress={handleNext}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.continueButtonText}>
-              Continue
-            </Text>
-          </TouchableOpacity>
+            style={styles.continueButton}
+            disabled={!onboardingData.bio.trim() || !onboardingData.profession.trim()}
+          />
         </View>
 
       </ScrollView>
@@ -260,9 +206,6 @@ const styles = StyleSheet.create({
   formContainer: {
     flex: 1,
   },
-  fieldContainer: {
-    marginBottom: 32,
-  },
   inputContainer: {
     marginBottom: 32,
   },
@@ -270,12 +213,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 6,
     letterSpacing: -0.2,
   },
-  radiusValue: {
-    color: colors.primary,
-    fontWeight: 'bold',
+  fieldDescription: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginBottom: 12,
+    lineHeight: 20,
   },
   inputWrapper: {
     backgroundColor: colors.card,
@@ -298,95 +243,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '500',
   },
-  optionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  optionCard: {
-    flex: 1,
-    minWidth: (width - 64) / 2,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    shadowColor: colors.text,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  selectedOptionCard: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  optionText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  selectedOptionText: {
-    color: colors.white,
-    fontWeight: '600',
-  },
-  sliderContainer: {
-    marginTop: 8,
-  },
-  sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  sliderLabel: {
-    fontSize: 14,
-    color: colors.textLight,
-    fontWeight: '500',
-  },
-  sliderTrack: {
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: 3,
-    position: 'relative',
-    marginHorizontal: 8,
-  },
-  sliderProgress: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 3,
-  },
-  sliderThumb: {
-    position: 'absolute',
-    top: -6,
-    width: 18,
-    height: 18,
-    backgroundColor: colors.white,
-    borderRadius: 9,
-    borderWidth: 3,
-    borderColor: colors.primary,
-    shadowColor: colors.text,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    marginLeft: -9,
+  multilineInput: {
+    height: 100,
+    textAlignVertical: 'top',
   },
   buttonContainer: {
     marginTop: 40,
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
   },
   continueButton: {
     backgroundColor: colors.primary,
@@ -401,17 +264,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
-  },
-  disabledButton: {
-    backgroundColor: colors.border,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.white,
-    letterSpacing: -0.3,
   },
 });
 

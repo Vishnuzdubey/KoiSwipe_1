@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  TextInput, 
-  View, 
-  Text, 
-  TouchableOpacity,
-  TextInputProps,
-  ViewStyle,
-  TextStyle
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import colors from '@/constants/colors';
+import { Feather } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputProps,
+  TextStyle,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -44,7 +44,7 @@ export const Input: React.FC<InputProps> = ({
 
   const renderPasswordIcon = () => {
     if (!isPassword) return null;
-    
+
     return (
       <TouchableOpacity onPress={toggleSecureEntry} style={styles.iconContainer}>
         {secureTextEntry ? (
@@ -59,13 +59,10 @@ export const Input: React.FC<InputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
-      
-      <View style={[
-        styles.inputContainer,
-        error ? styles.inputError : null,
-      ]}>
+
+      <View style={[styles.inputContainer, error ? styles.inputError : null]}>
         {leftIcon && <View style={styles.iconContainer}>{leftIcon}</View>}
-        
+
         <TextInput
           style={[
             styles.input,
@@ -77,10 +74,10 @@ export const Input: React.FC<InputProps> = ({
           secureTextEntry={secureTextEntry}
           {...rest}
         />
-        
+
         {renderPasswordIcon() || (rightIcon && <View style={styles.iconContainer}>{rightIcon}</View>)}
       </View>
-      
+
       {error && <Text style={[styles.errorText, errorStyle]}>{error}</Text>}
     </View>
   );
@@ -107,10 +104,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
     paddingHorizontal: 16,
+    paddingVertical: 14, // Symmetric padding to keep placeholder vertically centered
     fontSize: 16,
     color: colors.text,
+    textAlignVertical: 'center',
   },
   iconContainer: {
     paddingHorizontal: 12,

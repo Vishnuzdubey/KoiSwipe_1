@@ -1,37 +1,62 @@
-import React from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  Switch, 
-  ScrollView, 
-  TouchableOpacity 
-} from 'react-native';
-import { Stack } from 'expo-router';
-import { Feather, MaterialCommunityIcons, FontAwesome, Ionicons, AntDesign } from '@expo/vector-icons';
+import colors from '@/constants/colors';
 import { useAppStore } from '@/store/app-store';
 import { useAuthStore } from '@/store/auth-store';
-import colors from '@/constants/colors';
+import { Feather } from '@expo/vector-icons';
+import { Stack, router } from 'expo-router';
+import React from 'react';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 export default function SettingsScreen() {
-  const { 
-    language, 
-    isDarkMode, 
-    notificationsEnabled, 
-    toggleDarkMode, 
-    toggleNotifications 
+  const {
+    language,
+    isDarkMode,
+    notificationsEnabled,
+    toggleDarkMode,
+    toggleNotifications
   } = useAppStore();
-  
+
   const { logout } = useAuthStore();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              // Navigate to auth screen after successful logout
+              router.replace('/auth/auth');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <>
       <Stack.Screen options={{ title: 'Settings' }} />
-      
+
       <ScrollView style={styles.container}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
               {/* Bell icon */}
@@ -48,7 +73,7 @@ export default function SettingsScreen() {
               thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
             />
           </View>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
               {/* Moon icon */}
@@ -65,7 +90,7 @@ export default function SettingsScreen() {
               thumbColor={isDarkMode ? colors.primary : '#f4f3f4'}
             />
           </View>
-          
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
               {/* Globe icon */}
@@ -79,10 +104,10 @@ export default function SettingsScreen() {
             <Feather name="chevron-right" size={20} color={colors.textLight} />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
               {/* Shield icon */}
@@ -94,7 +119,7 @@ export default function SettingsScreen() {
             </View>
             <Feather name="chevron-right" size={20} color={colors.textLight} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
               {/* Bell icon */}
@@ -106,7 +131,7 @@ export default function SettingsScreen() {
             </View>
             <Feather name="chevron-right" size={20} color={colors.textLight} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
               {/* Shield icon */}
@@ -119,10 +144,10 @@ export default function SettingsScreen() {
             <Feather name="chevron-right" size={20} color={colors.textLight} />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
-          
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
               {/* HelpCircle icon */}
@@ -134,7 +159,7 @@ export default function SettingsScreen() {
             </View>
             <Feather name="chevron-right" size={20} color={colors.textLight} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
               {/* Info icon */}
@@ -147,11 +172,11 @@ export default function SettingsScreen() {
             <Feather name="chevron-right" size={20} color={colors.textLight} />
           </TouchableOpacity>
         </View>
-        
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.dangerButton}>
           <Text style={styles.dangerText}>Delete Account</Text>
         </TouchableOpacity>

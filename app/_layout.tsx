@@ -1,15 +1,13 @@
+import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { useAppStore } from "@/store/app-store";
-import { useAuthStore } from "@/store/auth-store";
+import { useEffect, useState } from "react";
 
 export const unstable_settings = {
-  initialRouteName: "auth",
+  initialRouteName: "index",
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -19,9 +17,27 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
   });
-  
+
+  const [isAppReady, setIsAppReady] = useState(false);
   const hasCompletedOnboarding = useAppStore((state) => state.hasCompletedOnboarding);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { isAuthenticated, initializeAuth } = useAuthStore();
+
+  // Check for existing token on app start
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        await initializeAuth();
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+      } finally {
+        setIsAppReady(true);
+      }
+    };
+
+    if (loaded) {
+      checkAuthStatus();
+    }
+  }, [loaded, initializeAuth]);
 
   useEffect(() => {
     if (error) {
@@ -31,12 +47,12 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && isAppReady) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, isAppReady]);
 
-  if (!loaded) {
+  if (!loaded || !isAppReady) {
     return null;
   }
 
@@ -48,7 +64,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="auth/auth" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: "Chat" }} />
       <Stack.Screen name="profile/[id]" options={{ headerShown: true, title: "Profile" }} />

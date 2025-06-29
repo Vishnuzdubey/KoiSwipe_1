@@ -1,23 +1,21 @@
-import React, { useState, useRef } from 'react';
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  Image, 
-  FlatList, 
-  Dimensions, 
-  TouchableOpacity,
-  SafeAreaView
-} from 'react-native';
+import { Button } from '@/components/Button';
+import colors from '@/constants/colors';
+import { languages, onboardingSteps } from '@/mocks/onboarding';
+import { useAppStore } from '@/store/app-store';
+import { Language, OnboardingStep } from '@/types';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Button } from '@/components/Button';
-import { useAppStore } from '@/store/app-store';
-import { onboardingSteps, languages } from '@/mocks/onboarding';
-import { Language, OnboardingStep } from '@/types';
-import colors from '@/constants/colors';
+import React, { useRef, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -25,7 +23,7 @@ export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showLanguages, setShowLanguages] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-  
+
   const completeOnboarding = useAppStore((state) => state.completeOnboarding);
   const setLanguage = useAppStore((state) => state.setLanguage);
   const selectedLanguage = useAppStore((state) => state.language);
@@ -36,13 +34,13 @@ export default function OnboardingScreen() {
       setCurrentIndex(currentIndex + 1);
     } else {
       completeOnboarding();
-            router.replace('/auth/auth');
-          }
+      router.replace('/auth/auth');
+    }
   };
 
   const handleSkip = () => {
     completeOnboarding();
-     router.replace('/auth/auth');
+    router.replace('/auth/auth');
   };
 
   const handleSelectLanguage = (language: Language) => {
@@ -53,8 +51,8 @@ export default function OnboardingScreen() {
   const renderOnboardingItem = ({ item }: { item: OnboardingStep }) => {
     return (
       <View style={styles.slide}>
-        <Image 
-          source={{ uri: item.imageUrl }} 
+        <Image
+          source={{ uri: item.imageUrl }}
           style={styles.image}
           resizeMode="cover"
         />
@@ -109,7 +107,7 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      
+
       {showLanguages ? (
         renderLanguageSelector()
       ) : (
@@ -122,7 +120,7 @@ export default function OnboardingScreen() {
               <Text style={styles.skipButton}>Skip</Text>
             </TouchableOpacity>
           </View>
-          
+
           <FlatList
             ref={flatListRef}
             data={onboardingSteps}
@@ -136,7 +134,7 @@ export default function OnboardingScreen() {
               setCurrentIndex(index);
             }}
           />
-          
+
           <View style={styles.footer}>
             <View style={styles.pagination}>
               {onboardingSteps.map((_, index) => (
@@ -149,7 +147,7 @@ export default function OnboardingScreen() {
                 />
               ))}
             </View>
-            
+
             <Button
               title={currentIndex === onboardingSteps.length - 1 ? "Get Started" : "Next"}
               onPress={handleNext}
@@ -190,8 +188,13 @@ const styles = StyleSheet.create({
   image: {
     width: width * 0.8,
     height: width * 0.8,
-    borderRadius: 20,
+    borderRadius: 24,
     marginTop: 20,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
   },
   textContainer: {
     alignItems: 'center',
@@ -199,17 +202,19 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 'bold',
     color: colors.text,
     textAlign: 'center',
     marginBottom: 16,
+    letterSpacing: -0.5,
   },
   description: {
-    fontSize: 16,
+    fontSize: 17,
     color: colors.textLight,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
+    fontWeight: '500',
   },
   footer: {
     padding: 20,
@@ -220,15 +225,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   paginationDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: colors.border,
-    marginHorizontal: 4,
+    marginHorizontal: 6,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   paginationDotActive: {
     backgroundColor: colors.primary,
-    width: 20,
+    width: 24,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   nextButton: {
     width: '80%',
