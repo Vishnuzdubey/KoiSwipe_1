@@ -28,6 +28,36 @@ const AnimePreferencesScreen = () => {
   // Get auth state
   const { isAuthenticated, token } = useAuthStore();
 
+  // Genre image mapping for API loaded genres
+  const getGenreImage = (genreName) => {
+    const genreImages = {
+      'Romance': 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=400&h=400&fit=crop',
+      'Sci-Fi': 'https://images.unsplash.com/photo-1446776877081-d282a0f896e2?q=80&w=400&h=400&fit=crop',
+      'Slice of Life': 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=400&h=400&fit=crop',
+      'Sports': 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=400&h=400&fit=crop',
+      'Supernatural': 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?q=80&w=400&h=400&fit=crop',
+      'Suspense': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&h=400&fit=crop',
+      'Action': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?q=80&w=400&h=400&fit=crop',
+      'Adventure': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=400&h=400&fit=crop',
+      'Avant Garde': 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?q=80&w=400&h=400&fit=crop',
+      'Award Winning': 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&h=400&fit=crop',
+      'Boys Love': 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=400&h=400&fit=crop',
+      'Comedy': 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?q=80&w=400&h=400&fit=crop',
+      'Drama': 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=400&h=400&fit=crop',
+      'Ecchi': 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?q=80&w=400&h=400&fit=crop',
+      'Erotica': 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?q=80&w=400&h=400&fit=crop',
+      'Fantasy': 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?q=80&w=400&h=400&fit=crop',
+      'Girls Love': 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=400&h=400&fit=crop',
+      'Gourmet': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=400&h=400&fit=crop',
+      'Hentai': 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?q=80&w=400&h=400&fit=crop',
+      'Horror': 'https://images.unsplash.com/photo-1509248961158-d3f20ce5d1cb?q=80&w=400&h=400&fit=crop',
+      'Mystery': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&h=400&fit=crop',
+    };
+
+    // Return the specific image or a default fallback
+    return genreImages[genreName] || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=400&h=400&fit=crop';
+  };
+
   // Mock data as fallback with genre images
   const mockGenres = [
     { id: 'mock-1', name: 'Action', imageUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?q=80&w=400&h=400&fit=crop' },
@@ -289,7 +319,7 @@ const AnimePreferencesScreen = () => {
                       activeOpacity={0.7}
                     >
                       <Image
-                        source={{ uri: genre.imageUrl }}
+                        source={{ uri: genre.imageUrl || getGenreImage(genre.name) }}
                         style={styles.genreImage}
                         resizeMode="cover"
                       />

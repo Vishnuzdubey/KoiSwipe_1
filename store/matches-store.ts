@@ -189,6 +189,12 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
     if (currentIndex < potentialMatches.length) {
       const currentUser = potentialMatches[currentIndex];
       
+      // Update UI immediately
+      set((state) => ({
+        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
+      }));
+      
+      // Make API call in background
       try {
         const token = await AsyncStorage.getItem('auth_token');
         
@@ -216,10 +222,6 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
       } catch (error) {
         console.error('Error sending swipe action:', error);
       }
-      
-      set((state) => ({
-        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
-      }));
     }
   },
   
@@ -229,6 +231,12 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
     if (currentIndex < potentialMatches.length) {
       const currentUser = potentialMatches[currentIndex];
       
+      // Update UI immediately
+      set((state) => ({
+        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
+      }));
+      
+      // Make API call in background and check for match
       try {
         const token = await AsyncStorage.getItem('auth_token');
         
@@ -263,7 +271,6 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
               
               set((state) => ({
                 matches: [newMatch, ...state.matches],
-                currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
               }));
               return true; // Indicate it's a match
             }
@@ -274,11 +281,6 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
       } catch (error) {
         console.error('Error sending swipe action:', error);
       }
-      
-      // Regular like (no match)
-      set((state) => ({
-        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
-      }));
     }
     
     return false; // No match
@@ -290,6 +292,12 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
     if (currentIndex < potentialMatches.length) {
       const currentUser = potentialMatches[currentIndex];
       
+      // Update UI immediately
+      set((state) => ({
+        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
+      }));
+      
+      // Make API call in background
       try {
         const token = await AsyncStorage.getItem('auth_token');
         
@@ -324,7 +332,6 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
               
               set((state) => ({
                 matches: [newMatch, ...state.matches],
-                currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
               }));
               return true; // Indicate it's a match
             }
@@ -335,10 +342,6 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
       } catch (error) {
         console.error('Error sending super like action:', error);
       }
-      
-      set((state) => ({
-        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
-      }));
     }
     
     return false; // No match

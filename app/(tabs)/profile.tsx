@@ -4,19 +4,23 @@ import { useAuthStore } from '@/store/auth-store';
 import { useProfileStore } from '@/store/profile-store';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useEffect } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Image,
+  RefreshControl,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuthStore();
   const {
     profile,
@@ -30,10 +34,39 @@ export default function ProfileScreen() {
     deleteFavoriteGenre
   } = useProfileStore();
 
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => {
     loadProfile();
     loadFavoriteAnimes();
     loadFavoriteGenres();
+  }, []);
+
+  // Refresh profile data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Profile screen focused - refreshing data');
+      refreshProfileData();
+    }, [])
+  );
+
+  const refreshProfileData = async () => {
+    try {
+      await Promise.all([
+        loadProfile(),
+        loadFavoriteAnimes(),
+        loadFavoriteGenres()
+      ]);
+      console.log('Profile data refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing profile data:', error);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshProfileData();
+    setRefreshing(false);
   }, []);
 
   const calculateAge = (dateOfBirth: string) => {
@@ -106,8 +139,9 @@ export default function ProfileScreen() {
   if (!user || !profile) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Skeleton height={300} width="100%" />
+        <StatusBar hidden={true} />
+        <View style={[styles.header, { height: 300 + insets.top }]}>
+          <Skeleton height={300 + insets.top} width="100%" />
         </View>
         <View style={styles.section}>
           <Skeleton height={20} width="40%" style={{ marginBottom: 12 }} />
@@ -139,174 +173,204 @@ export default function ProfileScreen() {
   const handleSettings = () => {
     router.push('/settings');
   };
-
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Image
-          source={{ uri: profileImageUrl }}
-          style={styles.coverImage}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={styles.gradient}
-        />
-        <View style={styles.headerContent}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: profileImageUrl }}
-              style={styles.avatar}
-            />
-          </View>
-          <Text style={styles.username}>{profile.username}, {age}</Text>
-          <Text style={styles.location}>{location}</Text>
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              {/* Heart icon */}
-              <FontAwesome name="heart" size={20} color="#FFFFFF" />
-              <Text style={styles.statValue}>{favoriteAnimes.length}</Text>
-              <Text style={styles.statLabel}>Anime</Text>
-            </View>
-            <View style={styles.statItem}>
-              {/* Star icon */}
-              <FontAwesome name="star" size={20} color="#FFFFFF" />
-              <Text style={styles.statValue}>{favoriteGenres.length}</Text>
-              <Text style={styles.statLabel}>Genres</Text>
-            </View>
-            <View style={styles.statItem}>
-              {/* User icon */}
-              <Feather name="user" size={20} color="#FFFFFF" />
-              <Text style={styles.statValue}>{profile.gender}</Text>
-              <Text style={styles.statLabel}>Gender</Text>
-            </View>
-          </View>
-
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleEditProfile}
-            >
-              {/* Edit icon */}
-              <Feather name="edit" size={20} color={colors.primary} />
-              <Text style={styles.actionButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleSettings}
-            >
-              {/* Settings icon */}
-              <Feather name="settings" size={20} color={colors.primary} />
-              <Text style={styles.actionButtonText}>Settings</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About Me</Text>
-        <Text style={styles.bioText}>
-          {profile.fullname} • Looking for {profile.lookingFor.toLowerCase()}
-          {'\n'}Joined from coordinates: {location}
-          {'\n\n'}Edit your profile to add a custom bio!
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>My Favorite Genres</Text>
-        <View style={styles.tagsContainer}>
-          {favoriteGenres.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.genreTag}
-              onLongPress={() => handleDeleteGenre(item.genreId, item.genre.name)}
-            >
-              <Text style={styles.genreTagText}>{item.genre.name}</Text>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDeleteGenre(item.genreId, item.genre.name)}
-              >
-                <Feather name="x" size={12} color="#FFFFFF" />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-          {favoriteGenres.length === 0 && (
-            <Text style={styles.emptyText}>No favorite genres added yet</Text>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Favorite Anime ({favoriteAnimes.length})</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.animeList}
-        >
-          {favoriteAnimes.map((item, index) => (
-            <View key={index} style={styles.animeItemContainer}>
-              <View style={styles.animeItem}>
-                <Image
-                  source={{ uri: item.anime.imageUrl }}
-                  style={styles.animeImage}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity
-                  style={styles.animeDeleteButton}
-                  onPress={() => handleDeleteAnime(item.anime.id, item.anime.titleEnglish)}
-                >
-                  <Feather name="x" size={14} color="#FFFFFF" />
-                </TouchableOpacity>
-                <View style={styles.ratingBadge}>
-                  <FontAwesome name="star" size={10} color="#FFD700" />
-                  <Text style={styles.ratingText}>{item.rating}</Text>
-                </View>
-              </View>
-              <Text style={styles.animeTitle} numberOfLines={2}>
-                {item.anime.titleEnglish || item.anime.titleJapanese}
-              </Text>
-            </View>
-          ))}
-          {favoriteAnimes.length === 0 && (
-            <Text style={styles.emptyText}>No favorite anime added yet</Text>
-          )}
-        </ScrollView>
-      </View>
-
-      {profile.AnimeRating && profile.AnimeRating.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Reviews ({profile.AnimeRating.length})</Text>
-          {profile.AnimeRating.slice(0, 3).map((rating, index) => (
-            <View key={index} style={styles.reviewItem}>
+    <View style={styles.container}>
+      <StatusBar hidden={true} />
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        <View style={[styles.header, { height: 350 + insets.top }]}>
+          <Image
+            source={{ uri: profileImageUrl }}
+            style={styles.coverImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.8)']}
+            style={styles.gradient}
+          />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 40 }]}>
+            <View style={styles.avatarContainer}>
               <Image
-                source={{ uri: rating.anime.imageUrl }}
-                style={styles.reviewImage}
+                source={{ uri: profileImageUrl }}
+                style={styles.avatar}
               />
-              <View style={styles.reviewContent}>
-                <Text style={styles.reviewTitle}>{rating.anime.titleEnglish}</Text>
-                <View style={styles.reviewRating}>
-                  {[...Array(5)].map((_, i) => (
-                    <FontAwesome
-                      key={i}
-                      name={i < rating.rating / 2 ? "star" : "star-o"}
-                      size={12}
-                      color="#FFD700"
-                    />
-                  ))}
-                  <Text style={styles.reviewRatingText}>({rating.rating}/10)</Text>
-                </View>
-                <Text style={styles.reviewText} numberOfLines={2}>{rating.review}</Text>
+            </View>
+            <Text style={styles.username}>{profile.username}, {age}</Text>
+            <Text style={styles.location}>{location}</Text>
+
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                {/* Heart icon */}
+                <FontAwesome name="heart" size={20} color="#FFFFFF" />
+                <Text style={styles.statValue}>{favoriteAnimes.length}</Text>
+                <Text style={styles.statLabel}>Anime</Text>
+              </View>
+              <View style={styles.statItem}>
+                {/* Star icon */}
+                <FontAwesome name="star" size={20} color="#FFFFFF" />
+                <Text style={styles.statValue}>{favoriteGenres.length}</Text>
+                <Text style={styles.statLabel}>Genres</Text>
+              </View>
+              <View style={styles.statItem}>
+                {/* User icon */}
+                <Feather name="user" size={20} color="#FFFFFF" />
+                <Text style={styles.statValue}>{profile.gender}</Text>
+                <Text style={styles.statLabel}>Gender</Text>
               </View>
             </View>
-          ))}
-        </View>
-      )}
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleEditProfile}
+              >
+                {/* Edit icon */}
+                <Feather name="edit" size={20} color={colors.primary} />
+                <Text style={styles.actionButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleSettings}
+              >
+                {/* Settings icon */}
+                <Feather name="settings" size={20} color={colors.primary} />
+                <Text style={styles.actionButtonText}>Settings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>About Me</Text>
+          <Text style={styles.bioText}>
+            {profile.fullname} • Looking for {profile.lookingFor.toLowerCase()}
+            {'\n'}Joined from coordinates: {location}
+            {'\n\n'}Edit your profile to add a custom bio!
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Favorite Genres</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push('/add-genres' as any)}
+            >
+              <Feather name="plus" size={16} color={colors.primary} />
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.tagsContainer}>
+            {favoriteGenres.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.genreTag}
+                onLongPress={() => handleDeleteGenre(item.genreId, item.genre.name)}
+              >
+                <Text style={styles.genreTagText}>{item.genre.name}</Text>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteGenre(item.genreId, item.genre.name)}
+                >
+                  <Feather name="x" size={12} color="#FFFFFF" />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+            {favoriteGenres.length === 0 && (
+              <Text style={styles.emptyText}>No favorite genres added yet</Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Favorite Anime ({favoriteAnimes.length})</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push('/add-anime' as any)}
+            >
+              <Feather name="plus" size={16} color={colors.primary} />
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.animeList}
+          >
+            {favoriteAnimes.map((item, index) => (
+              <View key={index} style={styles.animeItemContainer}>
+                <View style={styles.animeItem}>
+                  <Image
+                    source={{ uri: item.anime.imageUrl }}
+                    style={styles.animeImage}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.animeDeleteButton}
+                    onPress={() => handleDeleteAnime(item.anime.id, item.anime.titleEnglish)}
+                  >
+                    <Feather name="x" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <View style={styles.ratingBadge}>
+                    <FontAwesome name="star" size={10} color="#FFD700" />
+                    <Text style={styles.ratingText}>{item.rating}</Text>
+                  </View>
+                </View>
+                <Text style={styles.animeTitle} numberOfLines={2}>
+                  {item.anime.titleEnglish || item.anime.titleJapanese}
+                </Text>
+              </View>
+            ))}
+            {favoriteAnimes.length === 0 && (
+              <Text style={styles.emptyText}>No favorite anime added yet</Text>
+            )}
+          </ScrollView>
+        </View>
+
+        {profile.AnimeRating && profile.AnimeRating.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>My Reviews ({profile.AnimeRating.length})</Text>
+            {profile.AnimeRating.slice(0, 3).map((rating, index) => (
+              <View key={index} style={styles.reviewItem}>
+                <Image
+                  source={{ uri: rating.anime.imageUrl }}
+                  style={styles.reviewImage}
+                />
+                <View style={styles.reviewContent}>
+                  <Text style={styles.reviewTitle}>{rating.anime.titleEnglish}</Text>
+                  <View style={styles.reviewRating}>
+                    {[...Array(5)].map((_, i) => (
+                      <FontAwesome
+                        key={i}
+                        name={i < rating.rating / 2 ? "star" : "star-o"}
+                        size={12}
+                        color="#FFD700"
+                      />
+                    ))}
+                    <Text style={styles.reviewRatingText}>({rating.rating}/10)</Text>
+                  </View>
+                  <Text style={styles.reviewText} numberOfLines={2}>{rating.review}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -316,7 +380,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    height: 300,
     position: 'relative',
   },
   coverImage: {
@@ -337,6 +400,7 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 20,
     alignItems: 'center',
+    paddingBottom: 40,
   },
   avatarContainer: {
     width: 120,
@@ -412,6 +476,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  addButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   bioText: {
     fontSize: 16,

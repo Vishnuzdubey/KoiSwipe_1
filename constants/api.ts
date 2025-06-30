@@ -1,6 +1,5 @@
 // API Configuration
-// TODO: Replace 'https://your-api-url.com' with your actual API URL
-// Example: 'https://koiswipe-api.herokuapp.com' or 'http://localhost:3000'
+
 export const API_CONFIG = {
   BASE_URL: 'https://koi-swipe.vercel.app/api/v1', // ⚠️ REPLACE WITH YOUR ACTUAL API URL
   ENDPOINTS: {

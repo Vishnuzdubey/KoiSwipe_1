@@ -249,7 +249,7 @@ export default function PreferencesScreen() {
             </View>
           </View>
           
-          <View style={styles.section}>
+          {/* <View style={styles.section}>
             <Text style={styles.sectionTitle}>Favorite Genres</Text>
             <Text style={styles.sectionDescription}>
               Select genres you enjoy watching
@@ -287,7 +287,7 @@ export default function PreferencesScreen() {
                 />
               ))}
             </ScrollView>
-          </View>
+          </View> */}
           
           <Button
             title="Save Profile"

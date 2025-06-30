@@ -9,7 +9,7 @@ import {
   TextStyle,
   TouchableOpacity,
   View,
-  ViewStyle,
+  ViewStyle
 } from 'react-native';
 
 interface InputProps extends TextInputProps {
@@ -37,6 +37,7 @@ export const Input: React.FC<InputProps> = ({
   ...rest
 }) => {
   const [secureTextEntry, setSecureTextEntry] = useState(isPassword);
+  const [isFocused, setIsFocused] = useState(false);
 
   const toggleSecureEntry = () => {
     setSecureTextEntry(!secureTextEntry);
@@ -60,7 +61,11 @@ export const Input: React.FC<InputProps> = ({
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
 
-      <View style={[styles.inputContainer, error ? styles.inputError : null]}>
+      <View style={[
+        styles.inputContainer,
+        isFocused && styles.inputFocused,
+        error ? styles.inputError : null,
+      ]}>
         {leftIcon && <View style={styles.iconContainer}>{leftIcon}</View>}
 
         <TextInput
@@ -72,6 +77,8 @@ export const Input: React.FC<InputProps> = ({
           ]}
           placeholderTextColor={colors.textLight}
           secureTextEntry={secureTextEntry}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           {...rest}
         />
 
@@ -99,16 +106,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: colors.card,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   input: {
     flex: 1,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    paddingVertical: 14, // Symmetric padding to keep placeholder vertically centered
     fontSize: 16,
     color: colors.text,
-    textAlignVertical: 'center',
   },
   iconContainer: {
     paddingHorizontal: 12,
@@ -117,6 +138,7 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: colors.error,
+    shadowColor: colors.error,
   },
   errorText: {
     color: colors.error,

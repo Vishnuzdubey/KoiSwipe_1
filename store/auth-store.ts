@@ -10,12 +10,15 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   token: string | null;
+  resendCooldown: number;
+  isResending: boolean;
   
   // Actions
   initializeAuth: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signUp: (signUpData: SignUpRequest) => Promise<void>;
   sendOtp: (email: string, type: 'signup' | 'resetpassword') => Promise<void>;
+  resendOtp: (email: string, type: 'signup' | 'resetpassword') => Promise<void>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -31,6 +34,8 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       token: null,
+      resendCooldown: 0,
+      isResending: false,
       
       initializeAuth: async () => {
         try {
@@ -101,7 +106,7 @@ export const useAuthStore = create<AuthState>()(
             set({ error: data.message || 'Login failed', isLoading: false });
           }
         } catch (error) {
-          // set({ error: 'Network error. Please check your connection.', isLoading: false });
+          set({ error: 'Network error. Please check your connection.', isLoading: false });
         }
       },
       
@@ -153,7 +158,7 @@ export const useAuthStore = create<AuthState>()(
             set({ error: data.message || 'Signup failed', isLoading: false });
           }
         } catch (error) {
-          // set({ error: 'Network error. Please check your connection.', isLoading: false });
+          set({ error: 'Network error. Please check your connection.', isLoading: false });
         }
       },
 
@@ -170,10 +175,58 @@ export const useAuthStore = create<AuthState>()(
           if (!response.ok) {
             set({ error: data.message || 'Failed to send OTP', isLoading: false });
           } else {
-            set({ isLoading: false });
+            set({ isLoading: false, resendCooldown: 60 }); // Start 60-second cooldown
+            
+            // Start countdown timer
+            const timer = setInterval(() => {
+              const current = get().resendCooldown;
+              if (current <= 1) {
+                clearInterval(timer);
+                set({ resendCooldown: 0 });
+              } else {
+                set({ resendCooldown: current - 1 });
+              }
+            }, 1000);
           }
         } catch (error) {
-          // set({ error: 'Network error. Please check your connection.', isLoading: false });
+          set({ error: 'Network error. Please check your connection.', isLoading: false });
+        }
+      },
+
+      resendOtp: async (email, type) => {
+        const { resendCooldown } = get();
+        if (resendCooldown > 0) {
+          set({ error: `Please wait ${resendCooldown} seconds before requesting another OTP` });
+          return;
+        }
+
+        set({ isResending: true, error: null });
+        try {
+          const response = await makeApiCall(API_CONFIG.ENDPOINTS.SEND_OTP, {
+            method: 'POST',
+            body: JSON.stringify({ email, type }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            set({ error: data.message || 'Failed to resend OTP', isResending: false });
+          } else {
+            set({ isResending: false, resendCooldown: 60 }); // Start 60-second cooldown
+            
+            // Start countdown timer
+            const timer = setInterval(() => {
+              const current = get().resendCooldown;
+              if (current <= 1) {
+                clearInterval(timer);
+                set({ resendCooldown: 0 });
+              } else {
+                set({ resendCooldown: current - 1 });
+              }
+            }, 1000);
+          }
+        } catch (error) {
+          set({ error: 'Network error. Please check your connection.', isResending: false });
         }
       },
 
@@ -193,7 +246,7 @@ export const useAuthStore = create<AuthState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          // set({ error: 'Network error. Please check your connection.', isLoading: false });
+          set({ error: 'Network error. Please check your connection.', isLoading: false });
         }
       },
 
@@ -213,7 +266,7 @@ export const useAuthStore = create<AuthState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          // set({ error: 'Network error. Please check your connection.', isLoading: false });
+          set({ error: 'Network error. Please check your connection.', isLoading: false });
         }
       },
       

@@ -1,5 +1,4 @@
 import { Button } from '@/components/Button';
-import { Input } from '@/components/Input';
 import { SignupStep1, SignupStep2, SignupStep3 } from '@/components/SignupSteps';
 import { StepProgress } from '@/components/StepProgress';
 import colors from '@/constants/colors';
@@ -21,6 +20,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -44,13 +44,14 @@ export default function AuthScreen() {
   const [relationshipGoal, setRelationshipGoal] = useState<RelationshipGoal>(RelationshipGoal.SERIOUS_RELATIONSHIP);
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [otpType, setOtpType] = useState<'signup' | 'resetpassword'>('signup');
 
   // Signup flow state
   const [signupStep, setSignupStep] = useState(1);
   const stepAnimation = useRef(new Animated.Value(1)).current;
   const progressAnimation = useRef(new Animated.Value(1)).current;
 
-  const { login, signUp, sendOtp, verifyOtp, resetPassword, isLoading, error, clearError } = useAuthStore();
+  const { login, signUp, sendOtp, resendOtp, verifyOtp, resetPassword, isLoading, error, clearError, resendCooldown, isResending } = useAuthStore();
   const navigation = useNavigation();
 
   // Animate step transitions
@@ -148,14 +149,18 @@ export default function AuthScreen() {
     clearError();
 
     if (authMode === 'login') {
-      await login(email, password);
-      if (!error) {
+      const result = await login(email, password);
+      // Check the store state after the async operation
+      const { error: loginError } = useAuthStore.getState();
+      if (!loginError) {
         router.replace('/(tabs)');
       }
     } else if (authMode === 'signup' && signupStep === 3) {
       // First send OTP for email verification
+      setOtpType('signup');
       await sendOtp(email, 'signup');
-      if (!error) {
+      const { error: otpError } = useAuthStore.getState();
+      if (!otpError) {
         setAuthMode('verifyOtp');
       }
     }
@@ -168,7 +173,8 @@ export default function AuthScreen() {
     }
 
     await verifyOtp(email, otp);
-    if (!error) {
+    const { error: verifyError } = useAuthStore.getState();
+    if (!verifyError) {
       // After OTP verification, proceed with signup
       const signUpData = {
         email,
@@ -186,7 +192,8 @@ export default function AuthScreen() {
       };
 
       await signUp(signUpData);
-      if (!error) {
+      const { error: signupError } = useAuthStore.getState();
+      if (!signupError) {
         router.replace('/src/AnimePreferencesScreen');
       }
     }
@@ -198,8 +205,10 @@ export default function AuthScreen() {
       return;
     }
 
+    setOtpType('resetpassword');
     await sendOtp(email, 'resetpassword');
-    if (!error) {
+    const { error: otpError } = useAuthStore.getState();
+    if (!otpError) {
       setAuthMode('resetPassword');
     }
   };
@@ -216,11 +225,17 @@ export default function AuthScreen() {
     }
 
     await resetPassword(email, otp, newPassword);
-    if (!error) {
+    const { error: resetError } = useAuthStore.getState();
+    if (!resetError) {
       Alert.alert('Success', 'Password reset successfully!', [
         { text: 'OK', onPress: () => setAuthMode('login') }
       ]);
     }
+  };
+
+  const handleResendOtp = async () => {
+    clearError();
+    await resendOtp(email, otpType);
   };
 
   const renderAuthForm = () => {
@@ -232,28 +247,38 @@ export default function AuthScreen() {
               <Text style={styles.formTitle}>Welcome Back</Text>
               <Text style={styles.formSubtitle}>Sign in to find your anime soulmate</Text>
 
-              <Input
-                label="Email"
-                placeholder="your.email@example.com"
-                value={email}
-                onChangeText={setEmail}
-                leftIcon={<Feather name="mail" size={20} color={colors.textLight} />}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                style={styles.input}
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather name="mail" size={20} color={colors.textLight} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="your.email@example.com"
+                    placeholderTextColor={colors.textLight}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                  />
+                </View>
+              </View>
 
-              <Input
-                label="Password"
-                placeholder="Your password"
-                value={password}
-                onChangeText={setPassword}
-                leftIcon={<Feather name="lock" size={20} color={colors.textLight} />}
-                isPassword
-                autoComplete="password"
-                style={styles.input}
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather name="lock" size={20} color={colors.textLight} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Your password"
+                    placeholderTextColor={colors.textLight}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={true}
+                    autoComplete="password"
+                  />
+                </View>
+              </View>
 
               <TouchableOpacity
                 onPress={() => setAuthMode('forgotPassword')}
@@ -298,6 +323,10 @@ export default function AuthScreen() {
               <SignupStep2
                 dob={dob}
                 setDob={setDob}
+                gender={gender}
+                setGender={setGender}
+                lookingFor={lookingFor}
+                setLookingFor={setLookingFor}
                 onNext={handleNextStep}
                 onBack={handlePrevStep}
                 animatedValue={stepAnimation}
@@ -306,10 +335,6 @@ export default function AuthScreen() {
 
             {signupStep === 3 && (
               <SignupStep3
-                gender={gender}
-                setGender={setGender}
-                lookingFor={lookingFor}
-                setLookingFor={setLookingFor}
                 password={password}
                 setPassword={setPassword}
                 confirmPassword={confirmPassword}
@@ -337,16 +362,21 @@ export default function AuthScreen() {
                 Enter your email address and we'll send you an OTP to reset your password.
               </Text>
 
-              <Input
-                label="Email"
-                placeholder="your.email@example.com"
-                value={email}
-                onChangeText={setEmail}
-                leftIcon={<Feather name="mail" size={20} color={colors.textLight} />}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={styles.input}
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather name="mail" size={20} color={colors.textLight} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="your.email@example.com"
+                    placeholderTextColor={colors.textLight}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
 
               <Button
                 title="Send OTP"
@@ -367,16 +397,21 @@ export default function AuthScreen() {
                 We've sent a 4-digit OTP to {email}. Please enter it below to verify your email.
               </Text>
 
-              <Input
-                label="OTP"
-                placeholder="Enter 4-digit OTP"
-                value={otp}
-                onChangeText={setOtp}
-                leftIcon={<Feather name="shield" size={20} color={colors.textLight} />}
-                keyboardType="numeric"
-                maxLength={4}
-                style={styles.input}
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>OTP</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather name="shield" size={20} color={colors.textLight} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter 4-digit OTP"
+                    placeholderTextColor={colors.textLight}
+                    value={otp}
+                    onChangeText={setOtp}
+                    keyboardType="numeric"
+                    maxLength={4}
+                  />
+                </View>
+              </View>
 
               <Button
                 title="Verify OTP"
@@ -384,6 +419,24 @@ export default function AuthScreen() {
                 isLoading={isLoading}
                 style={styles.authButton}
               />
+
+              <View style={styles.resendContainer}>
+                <Text style={styles.resendText}>Didn't receive the OTP? </Text>
+                <TouchableOpacity
+                  onPress={handleResendOtp}
+                  disabled={resendCooldown > 0 || isResending}
+                  style={styles.resendButton}
+                >
+                  <Text style={[
+                    styles.resendButtonText,
+                    (resendCooldown > 0 || isResending) && styles.resendDisabled
+                  ]}>
+                    {isResending ? 'Sending...' :
+                      resendCooldown > 0 ? `Resend (${resendCooldown}s)` :
+                        'Resend OTP'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         );
@@ -397,26 +450,36 @@ export default function AuthScreen() {
                 Enter the OTP sent to {email} and your new password.
               </Text>
 
-              <Input
-                label="OTP"
-                placeholder="Enter 4-digit OTP"
-                value={otp}
-                onChangeText={setOtp}
-                leftIcon={<Feather name="shield" size={20} color={colors.textLight} />}
-                keyboardType="numeric"
-                maxLength={4}
-                style={styles.input}
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>OTP</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather name="shield" size={20} color={colors.textLight} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter 4-digit OTP"
+                    placeholderTextColor={colors.textLight}
+                    value={otp}
+                    onChangeText={setOtp}
+                    keyboardType="numeric"
+                    maxLength={4}
+                  />
+                </View>
+              </View>
 
-              <Input
-                label="New Password"
-                placeholder="Enter new password"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                leftIcon={<Feather name="lock" size={20} color={colors.textLight} />}
-                isPassword
-                style={styles.input}
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>New Password</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather name="lock" size={20} color={colors.textLight} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter new password"
+                    placeholderTextColor={colors.textLight}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry={true}
+                  />
+                </View>
+              </View>
 
               <Button
                 title="Reset Password"
@@ -424,6 +487,24 @@ export default function AuthScreen() {
                 isLoading={isLoading}
                 style={styles.authButton}
               />
+
+              <View style={styles.resendContainer}>
+                <Text style={styles.resendText}>Didn't receive the OTP Passkey? </Text>
+                <TouchableOpacity
+                  onPress={handleResendOtp}
+                  disabled={resendCooldown > 0 || isResending}
+                  style={styles.resendButton}
+                >
+                  <Text style={[
+                    styles.resendButtonText,
+                    (resendCooldown > 0 || isResending) && styles.resendDisabled
+                  ]}>
+                    {isResending ? 'Sending...' :
+                      resendCooldown > 0 ? `Resend (${resendCooldown}s)` :
+                        'Resend OTP'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         );
@@ -457,6 +538,9 @@ export default function AuthScreen() {
             setAuthMode('signup');
           }
           clearError();
+          // Reset OTP and related state
+          setOtp('');
+          setNewPassword('');
         }}
       >
         <Feather name="arrow-left" size={24} color={colors.primary} />
@@ -518,12 +602,14 @@ export default function AuthScreen() {
               {(authMode === 'login') && (
                 <View style={styles.switchContainer}>
                   <Text style={styles.switchText}>
-                    Don't have an account?
+                    Don't have an account for?
                   </Text>
                   <TouchableOpacity onPress={() => {
                     setAuthMode('signup');
                     setSignupStep(1);
                     clearError();
+                    setOtp('');
+                    setNewPassword('');
                   }}>
                     <Text style={styles.switchButton}>
                       Sign Up
@@ -538,11 +624,13 @@ export default function AuthScreen() {
         {authMode === 'signup' && (
           <View style={styles.signupFooter}>
             <Text style={styles.switchText}>
-              Already have an account?
+              Already have an account for ?
             </Text>
             <TouchableOpacity onPress={() => {
               setAuthMode('login');
               clearError();
+              setOtp('');
+              setNewPassword('');
             }}>
               <Text style={styles.switchButton}>
                 Sign In
@@ -795,5 +883,58 @@ const styles = StyleSheet.create({
   },
   socialButton: {
     marginBottom: 20,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.text,
+    fontFamily: 'System',
+  },
+  resendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  resendText: {
+    color: colors.textLight,
+    fontSize: 14,
+  },
+  resendButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  resendButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  resendDisabled: {
+    color: colors.textLight,
   },
 });

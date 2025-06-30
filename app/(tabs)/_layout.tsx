@@ -1,7 +1,7 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
-import { FontAwesome, Feather } from '@expo/vector-icons';
 import colors from '@/constants/colors';
+import { Feather, FontAwesome } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import React from 'react';
 
 export default function TabLayout() {
   return (
@@ -28,40 +28,41 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Discover',
-          tabBarLabel: 'Discover',
+          tabBarLabel: ' ',
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="heart" size={size} color={color} />
           ),
         }}
       />
-      
+
       <Tabs.Screen
         name="messages"
         options={{
           title: 'Messages',
-          tabBarLabel: 'Messages',
+          tabBarLabel: ' ',
           tabBarIcon: ({ color, size }) => (
             <Feather name="message-circle" size={size} color={color} />
           ),
         }}
       />
-      
+
       <Tabs.Screen
         name="discover"
         options={{
           title: 'Explore',
-          tabBarLabel: 'Explore',
+          tabBarLabel: ' ',
           tabBarIcon: ({ color, size }) => (
             <Feather name="compass" size={size} color={color} />
           ),
         }}
       />
-      
+
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarLabel: 'Profile',
+          tabBarLabel: ' ',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size} color={color} />
           ),
