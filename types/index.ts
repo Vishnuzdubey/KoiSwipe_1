@@ -228,3 +228,33 @@ export interface AddFavoriteGenresRequest {
   genreIds: string[];
 }
 
+export type Post = {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    fullname: string;
+    username: string;
+  };
+  likesCount: number;
+  commentsCount: number;
+  isLiked?: boolean;
+};
+
+export type Comment = {
+  id: string;
+  postId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user?: {
+    id: string;
+    fullname: string;
+    username: string;
+  };
+};

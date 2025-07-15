@@ -191,3 +191,86 @@ export const genreApi = {
     return response.json();
   },
 };
+
+// Post API functions
+export const postApi = {
+  // Get all posts
+  getPosts: async () => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/user/post`, {
+      method: 'GET',
+      headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch posts');
+    return response.json();
+  },
+
+  // Create a post
+  createPost: async (title: string, content: string, imageUrl?: string) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/user/post`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ title, content, imageUrl }),
+    });
+    if (!response.ok) throw new Error('Failed to create post');
+    return response.json();
+  },
+
+  // Delete a post
+  deletePost: async (postId: string) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/user/post/${postId}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!response.ok) throw new Error('Failed to delete post');
+    return response.json();
+  },
+
+  // Toggle like on a post
+  toggleLike: async (postId: string) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/user/post/toggle-like/${postId}`, {
+      method: 'POST',
+      headers,
+    });
+    if (!response.ok) throw new Error('Failed to toggle like');
+    return response.json();
+  },
+
+  // Get comments for a post
+  getComments: async (postId: string) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/user/post/comments/${postId}`, {
+      method: 'GET',
+      headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch comments');
+    return response.json();
+  },
+
+  // Create a comment
+  createComment: async (postId: string, content: string) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/user/post/comments/${postId}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ content }),
+    });
+    if (!response.ok) throw new Error('Failed to create comment');
+    return response.json();
+  },
+
+  // Report a user
+  reportUser: async (reportedId: string, reason: string, description: string) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/user/report`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ reportedId, reason, description }),
+    });
+    if (!response.ok) throw new Error('Failed to report user');
+    return response.json();
+  },
+};

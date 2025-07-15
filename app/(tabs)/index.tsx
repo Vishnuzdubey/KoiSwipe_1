@@ -1,6 +1,6 @@
 import { EmptyState } from '@/components/EmptyState';
+import { InteractiveLoader } from '@/components/InteractiveLoader';
 import { ProfileCard } from '@/components/ProfileCard';
-import { Skeleton } from '@/components/Skeleton';
 import colors from '@/constants/colors';
 import { useMatchesStore } from '@/store/matches-store';
 import { User } from '@/types';
@@ -22,7 +22,10 @@ export default function DiscoverScreen() {
     potentialMatches,
     currentIndex,
     isLoading,
+    isPreloading,
+    hasMoreProfiles,
     loadPotentialMatches,
+    preloadMoreProfiles,
     swipeLeft,
     swipeRight,
     superLike,
@@ -40,10 +43,40 @@ export default function DiscoverScreen() {
   const nopeOpacity = useRef(new Animated.Value(0)).current;
   const superLikeOpacity = useRef(new Animated.Value(0)).current;
   const superLikeScale = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
     loadPotentialMatches();
   }, []);
+
+  // Preload more profiles when near the end
+  useEffect(() => {
+    if (!isLoading && currentIndex >= potentialMatches.length - 3 && hasMoreProfiles) {
+      preloadMoreProfiles();
+    }
+  }, [currentIndex, potentialMatches.length, isLoading, hasMoreProfiles]);
+
+  // Pulse animation for preloading indicator
+  useEffect(() => {
+    if (isPreloading) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0.5,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [isPreloading]);
 
   // Reset all overlay animations
   const resetOverlayAnimations = () => {
@@ -254,50 +287,44 @@ export default function DiscoverScreen() {
     })
   ).current;
 
-  const handleSwipeLeft = () => {
+  const handleSwipeLeft = async () => {
     if (isSwipeInProgress) return;
-    // Make API call in background, don't wait for it
-    swipeLeft().catch(error => console.warn('Swipe left API error:', error));
+    swipeLeft(); // No await - immediate UI update
   };
 
-  const handleSwipeRight = () => {
+  const handleSwipeRight = async () => {
     if (isSwipeInProgress) return;
 
-    // Get current user before swipe for potential match animation
-    const currentUser = potentialMatches[currentIndex];
+    swipeRight(); // No await - immediate UI update
 
-    // Make API call in background and handle match result
-    swipeRight().then(isMatch => {
-      if (isMatch && currentUser) {
-        setMatchedUser(currentUser);
-        setShowMatchAnimation(true);
+    // For match animation, we'll simulate it occasionally for demo
+    // In real app, you'd get match info from a notification system
+    if (Math.random() < 0.1 && currentIndex < potentialMatches.length) { // 10% chance for demo
+      setMatchedUser(potentialMatches[currentIndex]);
+      setShowMatchAnimation(true);
 
-        setTimeout(() => {
-          setShowMatchAnimation(false);
-          setMatchedUser(null);
-        }, 3000);
-      }
-    }).catch(error => console.warn('Swipe right API error:', error));
+      setTimeout(() => {
+        setShowMatchAnimation(false);
+        setMatchedUser(null);
+      }, 3000);
+    }
   };
 
-  const handleSuperLike = () => {
+  const handleSuperLike = async () => {
     if (isSwipeInProgress) return;
 
-    // Get current user before swipe for potential match animation
-    const currentUser = potentialMatches[currentIndex];
+    superLike(); // No await - immediate UI update
 
-    // Make API call in background and handle match result
-    superLike().then(isMatch => {
-      if (isMatch && currentUser) {
-        setMatchedUser(currentUser);
-        setShowMatchAnimation(true);
+    // Higher chance of match for super like
+    if (Math.random() < 0.3 && currentIndex < potentialMatches.length) { // 30% chance for demo
+      setMatchedUser(potentialMatches[currentIndex]);
+      setShowMatchAnimation(true);
 
-        setTimeout(() => {
-          setShowMatchAnimation(false);
-          setMatchedUser(null);
-        }, 3000);
-      }
-    }).catch(error => console.warn('Super like API error:', error));
+      setTimeout(() => {
+        setShowMatchAnimation(false);
+        setMatchedUser(null);
+      }, 3000);
+    }
   };
 
   // Button handlers with animations
@@ -319,13 +346,10 @@ export default function DiscoverScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <View style={styles.cardContainer}>
-          <Skeleton
-            height={600}
-            width="100%"
-            borderRadius={16}
-          />
-        </View>
+        <InteractiveLoader
+          message="Finding your perfect match..."
+          submessage="Analyzing profiles just for you"
+        />
       </View>
     );
   }
@@ -457,6 +481,13 @@ export default function DiscoverScreen() {
               </View>
             </View>
           </View>
+        </View>
+      )}
+
+      {/* Subtle preloading indicator */}
+      {isPreloading && (
+        <View style={styles.preloadingIndicator}>
+          <Animated.View style={[styles.preloadingDot, { opacity: pulseAnim }]} />
         </View>
       )}
     </View>
@@ -612,5 +643,17 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 45,
     backgroundColor: '#FFFFFF',
+  },
+  preloadingIndicator: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    zIndex: 1000,
+  },
+  preloadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
   },
 });

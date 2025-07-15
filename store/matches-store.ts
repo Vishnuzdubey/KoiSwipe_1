@@ -73,10 +73,13 @@ interface MatchesState {
   messages: Record<string, Message[]>;
   currentIndex: number;
   isLoading: boolean;
+  isPreloading: boolean;
   error: string | null;
+  hasMoreProfiles: boolean;
   
   // Actions
   loadPotentialMatches: () => Promise<void>;
+  preloadMoreProfiles: () => Promise<void>;
   loadMatches: () => void;
   loadMessages: (matchId: string) => void;
   swipeLeft: () => Promise<void>;
@@ -92,7 +95,9 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
   messages: {},
   currentIndex: 0,
   isLoading: false,
+  isPreloading: false,
   error: null,
+  hasMoreProfiles: true,
   
   loadPotentialMatches: async () => {
     set({ isLoading: true, error: null });
@@ -158,6 +163,56 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
       });
     }
   },
+
+  preloadMoreProfiles: async () => {
+    const { isPreloading, hasMoreProfiles } = get();
+    
+    // Don't preload if already preloading or no more profiles available
+    if (isPreloading || !hasMoreProfiles) return;
+    
+    set({ isPreloading: true });
+    
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      
+      if (!token) {
+        set({ isPreloading: false });
+        return;
+      }
+
+      console.log('🔄 Preloading more profiles...');
+      const response = await makeAuthenticatedApiCall(
+        API_CONFIG.ENDPOINTS.GET_RECOMMENDATIONS,
+        token
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const recommendations = Array.isArray(data) ? data : (data.data || []);
+        
+        if (recommendations.length > 0) {
+          const enhancedUsers = recommendations.map(enhanceApiUserWithPlaceholders);
+          set((state) => ({ 
+            potentialMatches: [...state.potentialMatches, ...enhancedUsers],
+            isPreloading: false,
+          }));
+          console.log('✅ Preloaded', enhancedUsers.length, 'additional profiles');
+        } else {
+          console.log('📭 No more profiles available for preloading');
+          set({ 
+            isPreloading: false,
+            hasMoreProfiles: false,
+          });
+        }
+      } else {
+        console.log('❌ Preloading failed. Status:', response.status);
+        set({ isPreloading: false });
+      }
+    } catch (error) {
+      console.error('❌ Error preloading profiles:', error);
+      set({ isPreloading: false });
+    }
+  },
   
   loadMatches: () => {
     set({ isLoading: true });
@@ -184,23 +239,29 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
   },
 
   swipeLeft: async () => {
-    const { currentIndex, potentialMatches } = get();
+    const { currentIndex, potentialMatches, preloadMoreProfiles } = get();
     
     if (currentIndex < potentialMatches.length) {
       const currentUser = potentialMatches[currentIndex];
       
-      // Update UI immediately
+      // Immediately update UI
+      const newIndex = currentIndex + 1;
       set((state) => ({
-        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
+        currentIndex: newIndex,
       }));
       
-      // Make API call in background
+      // Check if we need to preload more profiles (when 3 profiles left)
+      if (newIndex >= potentialMatches.length - 3) {
+        preloadMoreProfiles();
+      }
+      
+      // Send API call in background
       try {
         const token = await AsyncStorage.getItem('auth_token');
         
         if (token) {
           console.log('🔄 Sending DISLIKE swipe action...');
-          const response = await makeAuthenticatedApiCall(
+          makeAuthenticatedApiCall(
             API_CONFIG.ENDPOINTS.SWIPE_ACTION,
             token,
             {
@@ -210,14 +271,15 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
                 action: 'DISLIKE'
               }),
             }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Swipe action successful:', data);
-          } else {
-            console.log('❌ Swipe action failed:', response.status);
-          }
+          ).then(response => {
+            if (response.ok) {
+              console.log('✅ Swipe action successful');
+            } else {
+              console.log('❌ Swipe action failed:', response.status);
+            }
+          }).catch(error => {
+            console.error('Error sending swipe action:', error);
+          });
         }
       } catch (error) {
         console.error('Error sending swipe action:', error);
@@ -226,23 +288,29 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
   },
   
   swipeRight: async () => {
-    const { currentIndex, potentialMatches } = get();
+    const { currentIndex, potentialMatches, preloadMoreProfiles } = get();
     
     if (currentIndex < potentialMatches.length) {
       const currentUser = potentialMatches[currentIndex];
       
-      // Update UI immediately
+      // Immediately update UI
+      const newIndex = currentIndex + 1;
       set((state) => ({
-        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
+        currentIndex: newIndex,
       }));
       
-      // Make API call in background and check for match
+      // Check if we need to preload more profiles (when 3 profiles left)
+      if (newIndex >= potentialMatches.length - 3) {
+        preloadMoreProfiles();
+      }
+      
+      // Send API call in background and check for match
       try {
         const token = await AsyncStorage.getItem('auth_token');
         
         if (token) {
           console.log('🔄 Sending LIKE swipe action...');
-          const response = await makeAuthenticatedApiCall(
+          makeAuthenticatedApiCall(
             API_CONFIG.ENDPOINTS.SWIPE_ACTION,
             token,
             {
@@ -252,58 +320,66 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
                 action: 'LIKE'
               }),
             }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Swipe action successful:', data);
-            
-            // Check if it's a match
-            if (data.success && data.data && data.data.isMatch) {
-              console.log('🎉 It\'s a match!');
-              const newMatch: Match = {
-                id: data.data.matchId || `match-${Date.now()}`,
-                userId: 'current-user',
-                matchedUserId: currentUser.id,
-                createdAt: Date.now(),
-                lastMessageAt: Date.now(),
-              };
+          ).then(async (response) => {
+            if (response.ok) {
+              const data = await response.json();
+              console.log('✅ Swipe action successful:', data);
               
-              set((state) => ({
-                matches: [newMatch, ...state.matches],
-              }));
-              return true; // Indicate it's a match
+              // Check if it's a match
+              if (data.success && data.data && data.data.isMatch) {
+                console.log('🎉 It\'s a match!');
+                const newMatch: Match = {
+                  id: data.data.matchId || `match-${Date.now()}`,
+                  userId: 'current-user',
+                  matchedUserId: currentUser.id,
+                  createdAt: Date.now(),
+                  lastMessageAt: Date.now(),
+                };
+                
+                set((state) => ({
+                  matches: [newMatch, ...state.matches],
+                }));
+                return true; // This won't be returned to the UI since it's async
+              }
+            } else {
+              console.log('❌ Swipe action failed:', response.status);
             }
-          } else {
-            console.log('❌ Swipe action failed:', response.status);
-          }
+          }).catch(error => {
+            console.error('Error sending swipe action:', error);
+          });
         }
       } catch (error) {
         console.error('Error sending swipe action:', error);
       }
     }
     
-    return false; // No match
+    return false; // UI doesn't wait for API response
   },
 
   superLike: async () => {
-    const { currentIndex, potentialMatches } = get();
+    const { currentIndex, potentialMatches, preloadMoreProfiles } = get();
     
     if (currentIndex < potentialMatches.length) {
       const currentUser = potentialMatches[currentIndex];
       
-      // Update UI immediately
+      // Immediately update UI
+      const newIndex = currentIndex + 1;
       set((state) => ({
-        currentIndex: Math.min(state.currentIndex + 1, state.potentialMatches.length - 1),
+        currentIndex: newIndex,
       }));
       
-      // Make API call in background
+      // Check if we need to preload more profiles (when 3 profiles left)
+      if (newIndex >= potentialMatches.length - 3) {
+        preloadMoreProfiles();
+      }
+      
+      // Send API call in background
       try {
         const token = await AsyncStorage.getItem('auth_token');
         
         if (token) {
           console.log('🔄 Sending SUPER_LIKE swipe action...');
-          const response = await makeAuthenticatedApiCall(
+          makeAuthenticatedApiCall(
             API_CONFIG.ENDPOINTS.SWIPE_ACTION,
             token,
             {
@@ -313,38 +389,39 @@ export const useMatchesStore = create<MatchesState>((set, get) => ({
                 action: 'SUPER_LIKE'
               }),
             }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Super like action successful:', data);
-            
-            // Check if it's a match (super likes have higher match probability)
-            if (data.success && data.data && data.data.isMatch) {
-              console.log('🎉 Super like matched!');
-              const newMatch: Match = {
-                id: data.data.matchId || `match-${Date.now()}`,
-                userId: 'current-user',
-                matchedUserId: currentUser.id,
-                createdAt: Date.now(),
-                lastMessageAt: Date.now(),
-              };
+          ).then(async (response) => {
+            if (response.ok) {
+              const data = await response.json();
+              console.log('✅ Super like action successful:', data);
               
-              set((state) => ({
-                matches: [newMatch, ...state.matches],
-              }));
-              return true; // Indicate it's a match
+              // Check if it's a match (super likes have higher match probability)
+              if (data.success && data.data && data.data.isMatch) {
+                console.log('🎉 Super like matched!');
+                const newMatch: Match = {
+                  id: data.data.matchId || `match-${Date.now()}`,
+                  userId: 'current-user',
+                  matchedUserId: currentUser.id,
+                  createdAt: Date.now(),
+                  lastMessageAt: Date.now(),
+                };
+                
+                set((state) => ({
+                  matches: [newMatch, ...state.matches],
+                }));
+              }
+            } else {
+              console.log('❌ Super like action failed:', response.status);
             }
-          } else {
-            console.log('❌ Super like action failed:', response.status);
-          }
+          }).catch(error => {
+            console.error('Error sending super like action:', error);
+          });
         }
       } catch (error) {
         console.error('Error sending super like action:', error);
       }
     }
     
-    return false; // No match
+    return false; // UI doesn't wait for API response
   },
   
   sendMessage: (matchId, text) => {
