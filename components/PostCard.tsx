@@ -1,11 +1,15 @@
 import colors from '@/constants/colors';
 import { Post } from '@/types';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Image,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,6 +23,9 @@ interface PostCardProps {
   onLike: (postId: string) => void;
   onComment: (post: Post) => void;
   onMoreOptions: (post: Post) => void;
+  onBookmark?: (postId: string) => void;
+  onReport?: (post: Post) => void;
+  isBookmarked?: boolean;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -26,7 +33,11 @@ export const PostCard: React.FC<PostCardProps> = ({
   onLike,
   onComment,
   onMoreOptions,
+  onBookmark,
+  onReport,
+  isBookmarked = false,
 }) => {
+  const [imageError, setImageError] = useState(false);
   // Use post data directly from props (no local state needed)
   const liked = post.isLiked || false;
   const likesCount = post.likesCount;
@@ -34,6 +45,56 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handleLike = () => {
     // Just call the parent handler - optimistic update will be handled by parent
     onLike(post.id);
+  };
+
+  const handleBookmark = () => {
+    if (onBookmark) {
+      onBookmark(post.id);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      const postUrl = `https://koiswipe.app/post/${post.id}`;
+      await Clipboard.setStringAsync(postUrl);
+      Alert.alert('Success', 'Post link copied to clipboard!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to copy link');
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const postUrl = `https://koiswipe.app/post/${post.id}`;
+      await Share.share({
+        message: `Check out this post: ${post.title}\n\n${postUrl}`,
+        url: postUrl,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
+  const handleReport = () => {
+    Alert.alert(
+      'Report Post',
+      'Why are you reporting this post?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Inappropriate Content', 
+          onPress: () => onReport && onReport(post)
+        },
+        { 
+          text: 'Spam', 
+          onPress: () => onReport && onReport(post)
+        },
+        { 
+          text: 'Harassment', 
+          onPress: () => onReport && onReport(post)
+        },
+      ]
+    );
   };
 
   const getTimeAgo = (dateString: string) => {
@@ -89,11 +150,12 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
         <Text style={styles.postContent}>{post.content}</Text>
 
-        {post.imageUrl && (
+        {post.imageUrl && !imageError && (
           <Image
             source={{ uri: post.imageUrl }}
             style={styles.postImage}
             resizeMode="cover"
+            onError={() => setImageError(true)}
           />
         )}
       </View>
@@ -102,12 +164,17 @@ export const PostCard: React.FC<PostCardProps> = ({
       <View style={styles.actions}>
         <View style={styles.leftActions}>
           <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-            <Feather
-              name="heart"
-              size={24}
-              color={liked ? colors.error : colors.textLight}
-              fill={liked ? colors.error : 'none'}
-            />
+            <LinearGradient
+              colors={liked ? [colors.error, '#FF6B9D'] : ['transparent', 'transparent']}
+              style={[styles.actionGradient, !liked && styles.transparentAction]}
+            >
+              <Feather
+                name="heart"
+                size={20}
+                color={liked ? '#FFF' : colors.textLight}
+                fill={liked ? '#FFF' : 'none'}
+              />
+            </LinearGradient>
             <Text style={[styles.actionText, liked && styles.likedText]}>
               {likesCount}
             </Text>
@@ -117,18 +184,46 @@ export const PostCard: React.FC<PostCardProps> = ({
             style={styles.actionButton}
             onPress={() => onComment(post)}
           >
-            <Feather name="message-circle" size={24} color={colors.textLight} />
+            <View style={styles.actionGradient}>
+              <Feather name="message-circle" size={20} color={colors.textLight} />
+            </View>
             <Text style={styles.actionText}>{post.commentsCount}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Feather name="share" size={24} color={colors.textLight} />
+          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+            <View style={styles.actionGradient}>
+              <Feather name="share" size={20} color={colors.textLight} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={handleCopyLink}>
+            <View style={styles.actionGradient}>
+              <MaterialIcons name="content-copy" size={20} color={colors.textLight} />
+            </View>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.saveButton}>
-          <Feather name="bookmark" size={24} color={colors.textLight} />
-        </TouchableOpacity>
+        <View style={styles.rightActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleBookmark}>
+            <LinearGradient
+              colors={isBookmarked ? [colors.primary, colors.secondary] : ['transparent', 'transparent']}
+              style={[styles.actionGradient, !isBookmarked && styles.transparentAction]}
+            >
+              <Feather
+                name="bookmark"
+                size={20}
+                color={isBookmarked ? '#FFF' : colors.textLight}
+                fill={isBookmarked ? '#FFF' : 'none'}
+              />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={handleReport}>
+            <View style={styles.actionGradient}>
+              <MaterialIcons name="report" size={20} color="#FF6B6B" />
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -220,11 +315,27 @@ const styles = StyleSheet.create({
   leftActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 24,
+    marginRight: 20,
+  },
+  actionGradient: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  transparentAction: {
+    backgroundColor: 'transparent',
   },
   actionText: {
     fontSize: 14,

@@ -1,13 +1,17 @@
 import colors from '@/constants/colors';
 import { postApi } from '@/utils/api';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
   Alert,
   Dimensions,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -31,8 +35,58 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  const handleImagePicker = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant permission to access photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImage(result.assets[0].uri);
+    }
+  };
+
+  const handleCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant permission to access camera');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImage(result.assets[0].uri);
+    }
+  };
+
+  const showImageOptions = () => {
+    Alert.alert(
+      'Add Photo',
+      'Choose an option',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Camera', onPress: handleCamera },
+        { text: 'Photo Library', onPress: handleImagePicker },
+      ]
+    );
+  };
+
+    const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert('Error', 'Please fill in both title and content');
       return;
@@ -40,22 +94,28 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
     setSubmitting(true);
     try {
-      const newPost = await postApi.createPost(title.trim(), content.trim());
-      setTitle('');
-      setContent('');
+      // In a real app, you would upload the image to a server and get a URL
+      const newPost = await postApi.createPost(title.trim(), content.trim(), selectedImage || undefined);
+      resetForm();
       onClose();
       onPostCreated(newPost);
       Alert.alert('Success', 'Post created successfully!');
     } catch (error) {
       console.error('Failed to create post:', error);
-      Alert.alert('Error', 'Failed to create post');
+      Alert.alert('Error', 'Failed to create post. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setContent('');
+    setSelectedImage(null);
+  };
+
   const handleClose = () => {
-    if (title.trim() || content.trim()) {
+    if (title.trim() || content.trim() || selectedImage) {
       Alert.alert(
         'Discard Post',
         'Are you sure you want to discard this post?',
@@ -65,8 +125,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             text: 'Discard',
             style: 'destructive',
             onPress: () => {
-              setTitle('');
-              setContent('');
+              resetForm();
               onClose();
             },
           },
@@ -151,25 +210,76 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             <Text style={styles.characterCount}>{content.length}/1000</Text>
           </View>
 
-          {/* Media Options */}
-          <View style={styles.mediaOptions}>
-            <TouchableOpacity style={styles.mediaOption}>
-              <Feather name="camera" size={24} color={colors.primary} />
+          {/* Selected Image Preview */}
+          {selectedImage && (
+            <View style={styles.imagePreview}>
+              <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+              <TouchableOpacity 
+                style={styles.removeImageButton}
+                onPress={() => setSelectedImage(null)}
+              >
+                <LinearGradient
+                  colors={['rgba(255,0,0,0.8)', 'rgba(255,0,0,0.6)']}
+                  style={styles.removeImageGradient}
+                >
+                  <MaterialIcons name="close" size={20} color="#FFF" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Enhanced Media Options */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaOptions}>
+            <TouchableOpacity style={styles.mediaOption} onPress={showImageOptions}>
+              <LinearGradient
+                colors={[colors.primary, colors.secondary]}
+                style={styles.mediaOptionGradient}
+              >
+                <MaterialIcons name="add-a-photo" size={24} color="#FFF" />
+              </LinearGradient>
+              <Text style={styles.mediaOptionText}>Add Photo</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.mediaOption} onPress={handleCamera}>
+              <LinearGradient
+                colors={['#FF6B6B', '#FF8E8E']}
+                style={styles.mediaOptionGradient}
+              >
+                <Feather name="camera" size={24} color="#FFF" />
+              </LinearGradient>
               <Text style={styles.mediaOptionText}>Camera</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaOption}>
-              <Feather name="image" size={24} color={colors.primary} />
+            
+            <TouchableOpacity style={styles.mediaOption} onPress={handleImagePicker}>
+              <LinearGradient
+                colors={['#4ECDC4', '#6EE7DF']}
+                style={styles.mediaOptionGradient}
+              >
+                <Feather name="image" size={24} color="#FFF" />
+              </LinearGradient>
               <Text style={styles.mediaOptionText}>Gallery</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.mediaOption}>
-              <Feather name="map-pin" size={24} color={colors.primary} />
+              <LinearGradient
+                colors={['#45B7D1', '#69C9E8']}
+                style={styles.mediaOptionGradient}
+              >
+                <Feather name="map-pin" size={24} color="#FFF" />
+              </LinearGradient>
               <Text style={styles.mediaOptionText}>Location</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.mediaOption}>
-              <Feather name="tag" size={24} color={colors.primary} />
+              <LinearGradient
+                colors={['#96CEB4', '#B2DFCE']}
+                style={styles.mediaOptionGradient}
+              >
+                <Feather name="users" size={24} color="#FFF" />
+              </LinearGradient>
               <Text style={styles.mediaOptionText}>Tag People</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -273,21 +383,53 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 4,
   },
+  imagePreview: {
+    marginVertical: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  removeImageGradient: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   mediaOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     paddingVertical: 20,
+    paddingHorizontal: 16,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   mediaOption: {
     alignItems: 'center',
-    padding: 12,
+    marginRight: 20,
+    minWidth: 70,
+  },
+  mediaOptionGradient: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   mediaOptionText: {
     fontSize: 12,
-    color: colors.primary,
-    marginTop: 4,
+    color: colors.text,
     fontWeight: '500',
+    textAlign: 'center',
   },
 });

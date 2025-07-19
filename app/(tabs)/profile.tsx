@@ -15,7 +15,9 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Dimensions,
+  Modal
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,6 +37,9 @@ export default function ProfileScreen() {
   } = useProfileStore();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const { width } = Dimensions.get('window');
 
   useEffect(() => {
     loadProfile();
@@ -163,8 +168,24 @@ export default function ProfileScreen() {
     ? profile.profilePicture[0]
     : `https://picsum.photos/400/600?random=${profile.id}`;
 
+  // Create multiple images for carousel effect
+  const profileImages = profile.profilePicture && profile.profilePicture.length > 0
+    ? profile.profilePicture
+    : [
+        `https://picsum.photos/400/600?random=${profile.id}`,
+        `https://picsum.photos/400/600?random=${profile.id + 1}`,
+        `https://picsum.photos/400/600?random=${profile.id + 2}`
+      ];
+
   const age = calculateAge(profile.dateOfBirth);
   const location = `${profile.latitude.toFixed(2)}, ${profile.longitude.toFixed(2)}`; // You can use reverse geocoding for actual location names
+
+  const handleImageScroll = (event: any) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = event.nativeEvent.contentOffset.x / slideSize;
+    const roundIndex = Math.round(index);
+    setCurrentImageIndex(roundIndex);
+  };
 
   const handleEditProfile = () => {
     router.push('/preferences');
@@ -175,7 +196,7 @@ export default function ProfileScreen() {
   };
   return (
     <View style={styles.container}>
-      <StatusBar hidden={true} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <ScrollView
         style={styles.container}
         refreshControl={
@@ -186,67 +207,120 @@ export default function ProfileScreen() {
             colors={[colors.primary]}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.header, { height: 350 + insets.top }]}>
-          <Image
-            source={{ uri: profileImageUrl }}
-            style={styles.coverImage}
-            resizeMode="cover"
-          />
+        {/* Enhanced Header with Image Carousel */}
+        <View style={[styles.header, { height: 520 + insets.top }]}>
+          {/* Image Carousel */}
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleImageScroll}
+            scrollEventThrottle={16}
+            style={styles.imageCarousel}
+          >
+            {profileImages.map((imageUrl, index) => (
+              <Image
+                key={index}
+                source={{ uri: imageUrl }}
+                style={[styles.carouselImage, { width }]}
+                resizeMode="cover"
+              />
+            ))}
+          </ScrollView>
+
+          {/* Image Indicators */}
+          <View style={styles.imageIndicators}>
+            {profileImages.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.indicator,
+                  { backgroundColor: index === currentImageIndex ? '#FFFFFF' : 'rgba(255,255,255,0.5)' }
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Header Navigation */}
+          <View style={[styles.headerNav, { paddingTop: insets.top + 10 }]}>
+            <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
+              <Feather name="arrow-left" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.navButton} 
+              onPress={() => setShowOptionsModal(true)}
+            >
+              <Feather name="more-vertical" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Enhanced Profile Info Overlay */}
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.8)']}
-            style={styles.gradient}
-          />
-          <View style={[styles.headerContent, { paddingTop: insets.top + 40 }]}>
-            <View style={styles.avatarContainer}>
-              <Image
-                source={{ uri: profileImageUrl }}
-                style={styles.avatar}
-              />
-            </View>
-            <Text style={styles.username}>{profile.username}, {age}</Text>
-            <Text style={styles.location}>{location}</Text>
+            style={styles.profileGradient}
+          >
+            <View style={styles.profileInfo}>
+              <View style={styles.profileHeader}>
+                <View style={styles.profileBasicInfo}>
+                  <Text style={styles.profileName}>{profile.username}</Text>
+                  <Text style={styles.profileAge}>{age}</Text>
+                </View>
+                <View style={styles.verifiedBadge}>
+                  <Feather name="check-circle" size={20} color="#4CAF50" />
+                </View>
+              </View>
+              
+              <View style={styles.locationContainer}>
+                <Feather name="map-pin" size={16} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.locationText}>{location}</Text>
+              </View>
 
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                {/* Heart icon */}
-                <FontAwesome name="heart" size={20} color="#FFFFFF" />
-                <Text style={styles.statValue}>{favoriteAnimes.length}</Text>
-                <Text style={styles.statLabel}>Anime</Text>
-              </View>
-              <View style={styles.statItem}>
-                {/* Star icon */}
-                <FontAwesome name="star" size={20} color="#FFFFFF" />
-                <Text style={styles.statValue}>{favoriteGenres.length}</Text>
-                <Text style={styles.statLabel}>Genres</Text>
-              </View>
-              <View style={styles.statItem}>
-                {/* User icon */}
-                <Feather name="user" size={20} color="#FFFFFF" />
-                <Text style={styles.statValue}>{profile.gender}</Text>
-                <Text style={styles.statLabel}>Gender</Text>
+              {/* Quick Info Grid */}
+              <View style={styles.quickInfoGrid}>
+                <View style={styles.quickInfoItem}>
+                  <Text style={styles.quickInfoLabel}>Gender</Text>
+                  <Text style={styles.quickInfoValue}>{profile.gender}</Text>
+                </View>
+                <View style={styles.quickInfoItem}>
+                  <Text style={styles.quickInfoLabel}>Looking for</Text>
+                  <Text style={styles.quickInfoValue}>{profile.lookingFor}</Text>
+                </View>
+                <View style={styles.quickInfoItem}>
+                  <Text style={styles.quickInfoLabel}>Anime</Text>
+                  <Text style={styles.quickInfoValue}>{favoriteAnimes.length}</Text>
+                </View>
+                <View style={styles.quickInfoItem}>
+                  <Text style={styles.quickInfoLabel}>Genres</Text>
+                  <Text style={styles.quickInfoValue}>{favoriteGenres.length}</Text>
+                </View>
               </View>
             </View>
+          </LinearGradient>
+        </View>
 
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleEditProfile}
-              >
-                {/* Edit icon */}
-                <Feather name="edit" size={20} color={colors.primary} />
-                <Text style={styles.actionButtonText}>Edit Profile</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleSettings}
-              >
-                {/* Settings icon */}
-                <Feather name="settings" size={20} color={colors.primary} />
-                <Text style={styles.actionButtonText}>Settings</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        {/* Enhanced Action Buttons */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity style={styles.secondaryActionButton} onPress={handleEditProfile}>
+            <LinearGradient
+              colors={['rgba(138, 111, 223, 0.1)', 'rgba(255, 166, 201, 0.1)']}
+              style={styles.actionButtonGradient}
+            >
+              <Feather name="edit-3" size={20} color={colors.primary} />
+              <Text style={styles.secondaryActionText}>Edit Profile</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.primaryActionButton} onPress={handleSettings}>
+            <LinearGradient
+              colors={[colors.primary, colors.secondary]}
+              style={styles.actionButtonGradient}
+            >
+              <Feather name="settings" size={20} color="#FFFFFF" />
+              <Text style={styles.primaryActionText}>Settings</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -369,7 +443,59 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
+
+        {/* Bottom spacing to prevent content being cut off */}
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Options Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showOptionsModal}
+        onRequestClose={() => setShowOptionsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={() => {
+                setShowOptionsModal(false);
+                handleSettings();
+              }}
+            >
+              <Feather name="settings" size={20} color={colors.text} />
+              <Text style={styles.modalOptionText}>Settings</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={() => {
+                setShowOptionsModal(false);
+                handleEditProfile();
+              }}
+            >
+              <Feather name="edit-3" size={20} color={colors.text} />
+              <Text style={styles.modalOptionText}>Edit Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalOption, styles.modalOptionDanger]}
+              onPress={() => {
+                setShowOptionsModal(false);
+                handleLogout();
+              }}
+            >
+              <Feather name="log-out" size={20} color={colors.error} />
+              <Text style={[styles.modalOptionText, { color: colors.error }]}>Log Out</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setShowOptionsModal(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -382,6 +508,411 @@ const styles = StyleSheet.create({
   header: {
     position: 'relative',
   },
+  imageCarousel: {
+    flex: 1,
+  },
+  carouselImage: {
+    height: '100%',
+  },
+  imageIndicators: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  indicator: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    marginHorizontal: 2,
+  },
+  headerNav: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    zIndex: 1,
+  },
+  navButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 200,
+    justifyContent: 'flex-end',
+  },
+  profileInfo: {
+    padding: 24,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  profileBasicInfo: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  profileName: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginRight: 12,
+  },
+  profileAge: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: '#FFFFFF',
+  },
+  verifiedBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16,
+    padding: 6,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  locationText: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    marginLeft: 6,
+  },
+  quickInfoGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  quickInfoItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  quickInfoLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  quickInfoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    gap: 12,
+  },
+  primaryActionButton: {
+    flex: 1,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  secondaryActionButton: {
+    flex: 1,
+    borderRadius: 25,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  actionButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  primaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  secondaryActionText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  section: {
+    backgroundColor: colors.card,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.primary}15`,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  addButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  bioText: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 24,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tag: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  tagText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  genreTag: {
+    backgroundColor: colors.secondary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+    position: 'relative',
+  },
+  genreTagText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: colors.error,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  animeList: {
+    paddingRight: 20,
+  },
+  animeItemContainer: {
+    marginRight: 16,
+    width: 140,
+  },
+  animeItem: {
+    position: 'relative',
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  animeImage: {
+    width: 140,
+    height: 200,
+  },
+  animeDeleteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ratingBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  animeTitle: {
+    fontSize: 14,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  reviewItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  reviewImage: {
+    width: 70,
+    height: 100,
+    borderRadius: 8,
+    marginRight: 16,
+  },
+  reviewContent: {
+    flex: 1,
+  },
+  reviewTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewRatingText: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginLeft: 6,
+  },
+  reviewText: {
+    fontSize: 14,
+    color: colors.textLight,
+    lineHeight: 20,
+  },
+  emptyText: {
+    color: colors.textLight,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  logoutButton: {
+    marginHorizontal: 16,
+    marginVertical: 20,
+    padding: 16,
+    backgroundColor: colors.error,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 20,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  modalOptionDanger: {
+    backgroundColor: `${colors.error}10`,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text,
+    marginLeft: 12,
+  },
+  modalCancelButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: colors.border,
+    borderRadius: 12,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textLight,
+  },
+  // Legacy styles (keeping for compatibility)
   coverImage: {
     width: '100%',
     height: '100%',
@@ -465,187 +996,5 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
     marginLeft: 8,
-  },
-  section: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  addButtonText: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  bioText: {
-    fontSize: 16,
-    color: colors.text,
-    lineHeight: 24,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  tag: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  tagText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  genreTag: {
-    backgroundColor: colors.secondary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  genreTagText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  deleteButton: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: 'rgba(244, 67, 54, 0.8)',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  animeList: {
-    paddingRight: 20,
-  },
-  animeItemContainer: {
-    marginRight: 12,
-    width: 120,
-  },
-  animeItem: {
-    position: 'relative',
-    marginBottom: 8,
-  },
-  animeImage: {
-    width: 120,
-    height: 160,
-    borderRadius: 8,
-  },
-  animeDeleteButton: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(244, 67, 54, 0.8)',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ratingBadge: {
-    position: 'absolute',
-    bottom: 4,
-    left: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginLeft: 2,
-  },
-  animeTitle: {
-    fontSize: 12,
-    color: colors.text,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  reviewItem: {
-    flexDirection: 'row',
-    marginBottom: 12,
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    padding: 12,
-  },
-  reviewImage: {
-    width: 60,
-    height: 80,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  reviewContent: {
-    flex: 1,
-  },
-  reviewTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  reviewRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  reviewRatingText: {
-    fontSize: 12,
-    color: colors.textLight,
-    marginLeft: 4,
-  },
-  reviewText: {
-    fontSize: 12,
-    color: colors.textLight,
-    lineHeight: 16,
-  },
-  emptyText: {
-    color: colors.textLight,
-    fontStyle: 'italic',
-  },
-  logoutButton: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#F44336',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
 });

@@ -32,6 +32,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="heart" size={size} color={color} />
           ),
+          headerShown: false,
         }}
       />
 

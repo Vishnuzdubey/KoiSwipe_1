@@ -4,14 +4,20 @@ import { ProfileCard } from '@/components/ProfileCard';
 import colors from '@/constants/colors';
 import { useMatchesStore } from '@/store/matches-store';
 import { User } from '@/types';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Modal,
   PanResponder,
+  ScrollView,
   StyleSheet,
+  Switch,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -34,6 +40,31 @@ export default function DiscoverScreen() {
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   const [matchedUser, setMatchedUser] = useState<User | null>(null);
   const [isSwipeInProgress, setIsSwipeInProgress] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [activeFilterTab, setActiveFilterTab] = useState<'basic' | 'advanced'>('basic');
+
+  // Filter states
+  const [genderFilter, setGenderFilter] = useState('Women');
+  const [ageRange, setAgeRange] = useState([20, 30]);
+  const [maxDistance, setMaxDistance] = useState(80);
+  const [showPeopleOutOfAge, setShowPeopleOutOfAge] = useState(false);
+  const [showPeopleOutOfDistance, setShowPeopleOutOfDistance] = useState(false);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+
+  const interests = [
+    { name: 'Festivals', emoji: '🎊' },
+    { name: 'Foodie', emoji: '🍕' },
+    { name: 'City breaks', emoji: '🏙️' },
+    { name: 'Anime', emoji: '🎌' },
+    { name: 'Gaming', emoji: '🎮' },
+    { name: 'Music', emoji: '🎵' },
+    { name: 'Travel', emoji: '✈️' },
+    { name: 'Sports', emoji: '⚽' },
+    { name: 'Reading', emoji: '📚' },
+    { name: 'Art', emoji: '🎨' },
+    { name: 'Cooking', emoji: '👨‍🍳' },
+    { name: 'Photography', emoji: '📸' },
+  ];
 
   // Animation values
   const pan = useRef(new Animated.ValueXY()).current;
@@ -343,6 +374,38 @@ export default function DiscoverScreen() {
     animateButtonAction('superlike', () => handleSuperLike());
   };
 
+  const toggleInterest = (interest: string) => {
+    setSelectedInterests(prev => 
+      prev.includes(interest) 
+        ? prev.filter(i => i !== interest)
+        : [...prev, interest]
+    );
+  };
+
+  const resetFilters = () => {
+    setGenderFilter('Women');
+    setAgeRange([20, 30]);
+    setMaxDistance(80);
+    setShowPeopleOutOfAge(false);
+    setShowPeopleOutOfDistance(false);
+    setSelectedInterests([]);
+  };
+
+  const applyFilters = () => {
+    // Here you would typically call an API or update your store with the filters
+    console.log('Applying filters:', {
+      gender: genderFilter,
+      ageRange,
+      maxDistance,
+      showPeopleOutOfAge,
+      showPeopleOutOfDistance,
+      interests: selectedInterests
+    });
+    setShowFilterModal(false);
+    // Refresh matches with new filters
+    loadPotentialMatches();
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -389,6 +452,23 @@ export default function DiscoverScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
+      
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Discover</Text>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <LinearGradient
+            colors={[colors.primary, colors.secondary]}
+            style={styles.filterButtonGradient}
+          >
+            <MaterialIcons name="tune" size={24} color="#FFF" />
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+      
       <View style={styles.cardContainer}>
         <Animated.View
           {...panResponder.panHandlers}
@@ -490,6 +570,204 @@ export default function DiscoverScreen() {
           <Animated.View style={[styles.preloadingDot, { opacity: pulseAnim }]} />
         </View>
       )}
+
+      {/* Filter Modal */}
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={showFilterModal}
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.filterModalContainer}>
+          {/* Header */}
+          <View style={styles.filterHeader}>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowFilterModal(false)}
+            >
+              <Feather name="x" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.filterHeaderTitle}>Narrow your search</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          {/* Tab Navigation */}
+          <View style={styles.filterTabs}>
+            <TouchableOpacity
+              style={[
+                styles.filterTab,
+                activeFilterTab === 'basic' && styles.activeFilterTab
+              ]}
+              onPress={() => setActiveFilterTab('basic')}
+            >
+              <Text style={[
+                styles.filterTabText,
+                activeFilterTab === 'basic' && styles.activeFilterTabText
+              ]}>
+                Basic filters
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.filterTab,
+                activeFilterTab === 'advanced' && styles.activeFilterTab
+              ]}
+              onPress={() => setActiveFilterTab('advanced')}
+            >
+              <Text style={[
+                styles.filterTabText,
+                activeFilterTab === 'advanced' && styles.activeFilterTabText
+              ]}>
+                Advanced filters
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.filterContent} showsVerticalScrollIndicator={false}>
+            {activeFilterTab === 'basic' ? (
+              <>
+                {/* Gender Selection */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>Who would you like to date?</Text>
+                  <TouchableOpacity style={styles.genderSelector}>
+                    <Text style={styles.genderSelectorText}>{genderFilter}</Text>
+                    <Feather name="chevron-right" size={20} color={colors.textLight} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Age Range */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>How old are they?</Text>
+                  <View style={styles.ageContainer}>
+                    <Text style={styles.ageRangeText}>Between {ageRange[0]} and {ageRange[1]}</Text>
+                    <View style={styles.sliderContainer}>
+                      <View style={styles.dualSlider}>
+                        <View style={styles.sliderTrack} />
+                        <View 
+                          style={[
+                            styles.sliderActiveTrack,
+                            {
+                              left: `${((ageRange[0] - 18) / (50 - 18)) * 100}%`,
+                              width: `${((ageRange[1] - ageRange[0]) / (50 - 18)) * 100}%`
+                            }
+                          ]} 
+                        />
+                        <View 
+                          style={[
+                            styles.sliderThumb,
+                            { left: `${((ageRange[0] - 18) / (50 - 18)) * 100}%` }
+                          ]} 
+                        />
+                        <View 
+                          style={[
+                            styles.sliderThumb,
+                            { left: `${((ageRange[1] - 18) / (50 - 18)) * 100}%` }
+                          ]} 
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.switchContainer}>
+                      <Text style={styles.switchLabel}>See people 2 years either side if I run out</Text>
+                      <Switch
+                        value={showPeopleOutOfAge}
+                        onValueChange={setShowPeopleOutOfAge}
+                        trackColor={{ false: colors.border, true: `${colors.primary}40` }}
+                        thumbColor={showPeopleOutOfAge ? colors.primary : colors.textLight}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Distance */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>How far away are they?</Text>
+                  <View style={styles.distanceContainer}>
+                    <Text style={styles.distanceText}>Up to {maxDistance} kilometres away</Text>
+                    <View style={styles.singleSliderContainer}>
+                      <View style={styles.sliderTrack} />
+                      <View 
+                        style={[
+                          styles.sliderActiveTrack,
+                          { width: `${(maxDistance / 100) * 100}%` }
+                        ]} 
+                      />
+                      <View 
+                        style={[
+                          styles.sliderThumb,
+                          { left: `${(maxDistance / 100) * 100}%` }
+                        ]} 
+                      />
+                    </View>
+                    <View style={styles.switchContainer}>
+                      <Text style={styles.switchLabel}>See people slightly further away if I run out</Text>
+                      <Switch
+                        value={showPeopleOutOfDistance}
+                        onValueChange={setShowPeopleOutOfDistance}
+                        trackColor={{ false: colors.border, true: `${colors.primary}40` }}
+                        thumbColor={showPeopleOutOfDistance ? colors.primary : colors.textLight}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Interests */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>Do they share any of your interests?</Text>
+                  <Text style={styles.filterSectionSubtitle}>Filter by your interests</Text>
+                  <Text style={styles.filterDescription}>
+                    We'll try to show you people who share any one of the interests you select.
+                  </Text>
+                  
+                  <View style={styles.interestsGrid}>
+                    {interests.map((interest) => (
+                      <TouchableOpacity
+                        key={interest.name}
+                        style={[
+                          styles.interestChip,
+                          selectedInterests.includes(interest.name) && styles.selectedInterestChip
+                        ]}
+                        onPress={() => toggleInterest(interest.name)}
+                      >
+                        <Text style={styles.interestEmoji}>{interest.emoji}</Text>
+                        <Text style={[
+                          styles.interestText,
+                          selectedInterests.includes(interest.name) && styles.selectedInterestText
+                        ]}>
+                          {interest.name}
+                        </Text>
+                        {selectedInterests.includes(interest.name) ? (
+                          <Feather name="check" size={16} color={colors.primary} />
+                        ) : (
+                          <Feather name="plus" size={16} color={colors.textLight} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </>
+            )}
+
+            <View style={{ height: 120 }} />
+          </ScrollView>
+
+          {/* Bottom Actions */}
+          <View style={styles.filterActions}>
+            <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+              <Text style={styles.resetButtonText}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
+              <LinearGradient
+                colors={[colors.primary, colors.secondary]}
+                style={styles.applyButtonGradient}
+              >
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -500,6 +778,37 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginTop:30,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  filterButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  filterButtonGradient: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -655,5 +964,241 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.primary,
+  },
+  // Filter Modal Styles
+  filterModalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterHeaderTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  filterTabs: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  filterTab: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginRight: 12,
+    backgroundColor: colors.border,
+  },
+  activeFilterTab: {
+    backgroundColor: colors.text,
+  },
+  filterTabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textLight,
+  },
+  activeFilterTabText: {
+    color: colors.background,
+  },
+  filterContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  filterSection: {
+    marginBottom: 32,
+  },
+  filterSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 16,
+  },
+  filterSectionSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  filterDescription: {
+    fontSize: 14,
+    color: colors.textLight,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  genderSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  genderSelectorText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  ageContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 20,
+  },
+  ageRangeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 20,
+  },
+  sliderContainer: {
+    marginBottom: 20,
+  },
+  dualSlider: {
+    position: 'relative',
+    height: 40,
+    justifyContent: 'center',
+  },
+  singleSliderContainer: {
+    position: 'relative',
+    height: 40,
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  sliderTrack: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+  },
+  sliderActiveTrack: {
+    position: 'absolute',
+    height: 4,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+  },
+  sliderThumb: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    marginLeft: -12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  switchLabel: {
+    fontSize: 14,
+    color: colors.textLight,
+    flex: 1,
+    marginRight: 12,
+  },
+  distanceContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 20,
+  },
+  distanceText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 20,
+  },
+  interestsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 16,
+  },
+  interestChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginRight: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectedInterestChip: {
+    backgroundColor: `${colors.primary}20`,
+    borderColor: colors.primary,
+  },
+  interestEmoji: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  interestText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginRight: 8,
+  },
+  selectedInterestText: {
+    color: colors.primary,
+  },
+  filterActions: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  resetButton: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    backgroundColor: colors.card,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  resetButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  applyButton: {
+    flex: 2,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  applyButtonGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFF',
   },
 });

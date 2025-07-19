@@ -3,14 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import colors from '../constants/colors';
 import { useAppStore } from '../store/app-store';
@@ -43,7 +43,7 @@ export default function SettingsScreen() {
   const [matchNotifications, setMatchNotifications] = useState(true);
 
   const handlePremiumUpgrade = () => {
-    router.push('/premium');
+    Alert.alert('Premium', 'Premium features coming soon!');
   };
 
   const handleLogout = async () => {
